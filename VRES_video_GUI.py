@@ -6,6 +6,7 @@ import wave
 import struct
 import cv2
 import matplotlib
+from datetime import datetime, timedelta
 import soundfile as sf 
 
 from numpy import arange
@@ -36,6 +37,7 @@ class Dataset_Initialisation_GUI:
 		# Variables
 		self.pose_est = BooleanVar()
 
+
 		# MENU
 		self.menubar = Menu(self.master)
 		self.filemenu = Menu(self.menubar, tearoff=0)
@@ -47,7 +49,6 @@ class Dataset_Initialisation_GUI:
 		self.filemenu.add_command(label="Exit", command=self.OnClosing)
 		self.menubar.add_cascade(label="File", menu=self.filemenu)
 		self.master["menu"] = self.menubar
-
 
 
 		self.dataset_info_label = Label(self.master, text = "Dataset Information:") 
@@ -93,43 +94,55 @@ class Dataset_Initialisation_GUI:
 
 		# VARIABLES
 		self.dataset_file = None
+		self.video_1_initial = None
+		self.video_2_initial = None
 
 
-	def SetMockTimeStamps(dataset, image_set, start_time, fps):
-	# Get image set and add timestamp metadata field
-		image_set = dataset.GetImageSet(image_set)
+	def SetTimeStamps(self, dataset, image_set, start_time, fps, t_zero_frame):
+
+		# Get image set and add timestamp metadata field
+		image_set = self.dataset_file.GetImageSet(image_set)
+		NUM_FRAMES = image_set.NumberOfImages() 
+
 		if image_set == None:
 			print "Failed to get %s image set"%image_set
 			exit()
-		dataset.AddMetadataField(image_set, 'TimeStamp', IDME.kValidTypes.DATE_TIME)
+		self.dataset_file.AddMetadataField(image_set, 'TimeStamp', IDME.kValidTypes.DATE_TIME)
 
 		# set values based on start time and fps
-		image_names = dataset.GetImageFilenames(image_set)
+		image_names = self.dataset_file.GetImageFilenames(image_set)
 		for ii, filename in enumerate(image_names):
-			additional_seconds = (ii/float(fps))
-			current_time = start_time + datetime.timedelta(seconds=additional_seconds)
-			if dataset.SetMetadataValue(image_set, filename, "TimeStamp", current_time) != IDME.IDME_OKAY:
+			additional_seconds = ((ii-int(t_zero_frame))/float(fps))
+			current_time = start_time + timedelta(seconds=additional_seconds)
+			if self.dataset_file.SetMetadataValue(image_set, filename, "TimeStamp", current_time) != IDME.IDME_OKAY:
 				print "Error could not set <filename> timestamp to <value>"
 
 
-	def GenerateMockDataset():
+	def GenerateDataset(self):
 
-		START_TIME = datetime.datetime.now()
+		START_TIME = datetime.now()
 		CAMERA_1_FPS = 30
 		CAMERA_2_FPS = 60
 
-		#dataset = IDME.DatasetFile(self.dataset_file.file_path)
-		dataset.AddImageSet('Video_1', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_1')
-		dataset.AddImageSet('Video_2', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_2')
+		self.dataset_file.AddImageSet('Video_1', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_1', '/home/kylesm/Desktop/VRES/VRES_GUI/Vid_1_meta.yaml')
+		self.dataset_file.AddImageSet('Video_2', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_2','/home/kylesm/Desktop/VRES/VRES_GUI/Vid_2_meta.yaml')
 
-		SetMockTimeStamps(dataset, 'forward_extracted_images', START_TIME, FORWARD_CAMERA_FPS)
-		SetMockTimeStamps(dataset, 'surface_extracted_images', START_TIME, SURFACE_CAMERA_FPS)
+		self.meta_1 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/Vid_1_meta.yaml')
+		self.meta_2 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/Vid_2_meta.yaml')
 
-		dataset.WriteFiles()
+		self.SetTimeStamps(self.dataset_file, 'Video_1', START_TIME, CAMERA_1_FPS, self.video_1_initial)
+		self.SetTimeStamps(self.dataset_file, 'Video_2', START_TIME, CAMERA_2_FPS, self.video_2_initial)
+
+		self.dataset_file.WriteFiles()
+
+
 
 	def SaveAndUpdate(self):
 
 		self.SaveFileAs()
+
+		self.GenerateDataset()
+
 
 	def SelectVideoFile(self, vid_name):
 		# get filename and attempt to read it
@@ -162,17 +175,18 @@ class Dataset_Initialisation_GUI:
 	def GoToVisualisation(self):
 		self.UpdateDatasetInformation()
 
-		self.dataset_file.WriteFiles()
+		#self.dataset_file.WriteFiles()
 		self.gui_window = Toplevel(self.master)
 
 		print self.pose_est
 
-		v = CameraLocGUI(self.gui_window, self.video_1_file_path, self.video_2_file_path, self.pose_est)
+		v = CameraLocGUI(self.gui_window, self.video_1_file_path, self.video_2_file_path)
+
+		self.video_1_initial = v.video_1_initial_frame
+		self.video_2_initial = v.video_2_initial_frame
 
 		self.perform_pose_est_checkbox['state'] = 'normal'
 		self.save_and_update_button['state'] = 'normal'
-
-
 
 
 
@@ -192,10 +206,8 @@ class Dataset_Initialisation_GUI:
 		if self.CheckForUnsavedChanges() == False:
 			return
 
-		self.dataset_file = IDME.DatasetFile()
+		self.dataset_file = IDME.DatasetFile()		
 		self.UpdateControlsAndLabels()
-
-		
 
 		
 	def SaveFile(self):
@@ -391,7 +403,6 @@ class VideoProcessing:
 		self.cap = cv2.VideoCapture()
 		self.cap.open(vid_url)
 
-		#self.cap.set(1,set_frame)
 		success, self.frame = self.cap.read()
 		
 		count = 0
@@ -399,12 +410,12 @@ class VideoProcessing:
 		while success:
 			success,frame = self.cap.read()
 			if success:
-				RGBA_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+				RGB_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 				#gray_resized = cv2.resize(gray, (300, 225))
 
 			print('Reading frame number %d' % count)
 
-			cv2.imwrite(os.path.join((path+name), name + "_frame_%d.jpg" % count), RGBA_frame)     # save frame as JPG file
+			cv2.imwrite(os.path.join((path+name), name + "_frame_%05d.jpg" % count), RGB_frame)     # save frame as JPG file
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				break
 			count += 1
@@ -413,7 +424,7 @@ class VideoProcessing:
 #localisation application class
 class CameraLocGUI:
 
-	def __init__(self,parent, vid_1_url, vid_2_url, pose_est):
+	def __init__(self,parent, vid_1_url, vid_2_url):
 
 		self.parent = parent
 
@@ -535,16 +546,20 @@ class CameraLocGUI:
 		TWO_canvas._tkcanvas.grid()
 		toolbar_frame_2.grid(row=9, column=7,columnspan=6, rowspan=1, sticky=W+S)
 
+		#start mainloop
+		self.parent.mainloop()
 
 	def set_initial_frame(self, name, ONE, TWO):
 
 		if name == "Video_1":
 			self.video_1_initial_frame = self.initial_frame_ONE_entry.get()
-			set_count = 0
+			print self.video_1_initial_frame
+			
 		
 		elif name == "Video_2":
 			self.video_2_initial_frame = self.initial_frame_TWO_entry.get()
-			set_count += 1
+			print self.video_2_initial_frame
+			
 
 
 	#traverse through the frames	
@@ -634,10 +649,9 @@ class CameraLocGUI:
 		ONE.SaveFrames(name_1, path, ONE.url)
 		TWO.SaveFrames(name_2, path, TWO.url)
 
-		self.ONE_label_index
-		self.TWO_label_index
 
 		self.parent.destroy()
+		self.parent.quit()
 
 
 
