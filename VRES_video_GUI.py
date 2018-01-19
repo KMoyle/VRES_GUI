@@ -754,20 +754,7 @@ if __name__ == "__main__":
 	GEOMETRIC_PIXEL_SCALE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Geometric_Pixel_Scale")
 	X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
 
-	# CREATE RESULTS SAVE DIRECTORY
-	results_folder = DATASET_PATH + "/Analyses"
-	if SAVE_ANALYSIS:
-		results_folder =  DATASET_PATH + "/Analyses/VO_Analysis_" + str(dataset.NumberOfAnalyses("VO_Analysis"))
-
-	if not os.path.exists(results_folder):
-		os.makedirs(results_folder)
-
-
-	# INITIALIZE ANALYSIS FILE, COPY PARAMETERS AND METADATA AND ADD VISUAL ODOMETRY FIELD
-	analysis_file = IDME.GenericAnalysisFile("VO_Analysis", dataset.GetDatasetFileInformation(), results_folder + '/VO_Analysis.yaml')
-	analysis_file.CopyParameterSetFromFile(parameter_file)
-	analysis_file.CopyImageSetMetadataFrom(image_set, [])
-	analysis_file.AddAnalysisField("VO_Pos", IDME.kValidTypes.CV_POINT3d)
+	dataset.AddMetadataField(image_set, 'VO_Pos', IDME.kValidTypes.CV_POINT3d)
 	
 	# INIT VARIABLES
 	pixel_shift = [0, 0]
@@ -865,7 +852,7 @@ if __name__ == "__main__":
 		position_estimates[array_index, 1] = position_estimates[array_index-1, 1] + delta_x*np.sin(position_estimates[array_index-1, 2]) 
 
 		# SET VO POSITION IN ANALYSIS FILE
-		error = analysis_file.SetAnalysisValue(filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
+		error = dataset.SetMetadataValue(image_set, filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
 		if error != IDME.IDME_OKAY:
 			print "WARNING! Was unable to set the VO Position for image %s to (%d, %d, %d). Error Code %d"%(filename, position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2], error)
 
@@ -874,8 +861,8 @@ if __name__ == "__main__":
 
 	# WRITE OUT ANALYSIS FILE AND ADD TO DATASET FILE
 	if SAVE_ANALYSIS == True: 
-		analysis_file.WriteFile()
-		dataset.AddAnalysis(analysis_file)
+		#analysis_file.WriteFile()
+		#dataset.AddAnalysis(analysis_file)
 		dataset.WriteFiles()
 
 
