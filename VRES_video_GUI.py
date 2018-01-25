@@ -70,13 +70,13 @@ class Dataset_Initialisation_GUI:
 		self.dataset_datetime_entry.grid(row=3, column=1, sticky=W+E)
 
 		#video streams URL
-		self.video_1_open_button = Button(self.master, text = "Select Video One",command=lambda: self.SelectVideoFile("video_1_file"))
+		self.video_1_open_button = Button(self.master, text = "Select Forward Facing Video",command=lambda: self.SelectVideoFile("forward_facing_video_file"))
 		self.video_1_open_button.grid(row=5, column=0,sticky=W+E)
 
 		self.video_1_file_label = Label(self.master, text='<Please Select a video File>', bg='#bbb')
 		self.video_1_file_label.grid(row=5, column=1, sticky=W+E)
 
-		self.video_2_open_button = Button(self.master, text = "Select Video Two",command=lambda: self.SelectVideoFile("video_2_file"))
+		self.video_2_open_button = Button(self.master, text = "Select Surface Facing Video",command=lambda: self.SelectVideoFile("surface_facing_video_file"))
 		self.video_2_open_button.grid(row=6, column=0, sticky=W+E)
 
 		self.video_2_file_label = Label(self.master, text='<Please Select a video File>', bg='#bbb')
@@ -94,8 +94,8 @@ class Dataset_Initialisation_GUI:
 
 		# VARIABLES
 		self.dataset_file = None
-		self.video_1_initial = 1
-		self.video_2_initial = 678
+		self.video_1_initial = 0
+		self.video_2_initial = 0
 
 
 	def SetTimeStamps(self, dataset, image_set, start_time, fps, t_zero_frame):
@@ -121,17 +121,17 @@ class Dataset_Initialisation_GUI:
 	def GenerateDataset(self):
 
 		START_TIME = datetime.now()
-		CAMERA_1_FPS = 30
+		CAMERA_1_FPS = 60
 		CAMERA_2_FPS = 60
 
-		self.dataset_file.AddImageSet('Video_1', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_1', '/home/kylesm/Desktop/VRES/VRES_GUI/Vid_1_meta.yaml')
-		self.dataset_file.AddImageSet('Video_2', '/home/kylesm/Desktop/VRES/VRES_GUI/Video_2','/home/kylesm/Desktop/VRES/VRES_GUI/Vid_2_meta.yaml')
+		self.dataset_file.AddImageSet('REF_forward_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_facing_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
+		self.dataset_file.AddImageSet('REF_surface_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_facing_images','/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
 
-		self.meta_1 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/Vid_1_meta.yaml')
-		self.meta_2 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/Vid_2_meta.yaml')
+		self.meta_1 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
+		self.meta_2 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
 
-		self.SetTimeStamps(self.dataset_file, 'Video_1', START_TIME, CAMERA_1_FPS, self.video_1_initial)
-		self.SetTimeStamps(self.dataset_file, 'Video_2', START_TIME, CAMERA_2_FPS, self.video_2_initial)
+		self.SetTimeStamps(self.dataset_file, 'REF_forward_images', START_TIME, CAMERA_1_FPS, self.video_1_initial)
+		self.SetTimeStamps(self.dataset_file, 'REF_surface_images', START_TIME, CAMERA_2_FPS, self.video_2_initial)
 
 		self.dataset_file.WriteFiles()
 
@@ -146,7 +146,7 @@ class Dataset_Initialisation_GUI:
 		self.master.destroy()
 		self.master.quit()
 
-		print self.pose_est.get()
+		#print self.pose_est.get()
 
 
 
@@ -156,22 +156,22 @@ class Dataset_Initialisation_GUI:
 		filename = askopenfilename(initialdir = map_gen_folder, title='Select Video File', filetypes = (("Video Files", ("*.MTS","*.mov","*.avi")), ("All Files", '*.*')))
 
 		print filename
-		if vid_name == "video_1_file":
+		if vid_name == "forward_facing_video_file":
 			if filename:
 				try:
 					self.video_1_file_label['text'] = filename
-					self.video_1_file_path = filename
+					self.forward_facing_file_path = filename
 				except Exception as e:
 					self.video_1_file_label['text'] = '<Please Select a Dataset File>'
 					self.video_1_file_path = ''
 					showerror("Opening Dataset File", "Failed to open the selected file as a dataset file.\n'%s'"%filename)
 					return
 
-		elif vid_name == "video_2_file":
+		elif vid_name == "surface_facing_video_file":
 			if filename:
 				try:
 					self.video_2_file_label['text'] = filename
-					self.video_2_file_path = filename
+					self.surface_facing_file_path = filename
 				except Exception as e:
 					self.video_2_file_label['text'] = '<Please Select a Dataset File>'
 					self.video_2_file_path = ''
@@ -186,10 +186,10 @@ class Dataset_Initialisation_GUI:
 
 		print self.pose_est
 
-		v = CameraLocGUI(self.gui_window, self.video_1_file_path, self.video_2_file_path)
+		v = CameraLocGUI(self.gui_window, self.forward_facing_file_path, self.surface_facing_file_path)
 
-		self.video_1_initial = v.video_1_initial_frame
-		self.video_2_initial = v.video_2_initial_frame
+		self.forward_facing_initial = v.forward_facing_initial_frame
+		self.surface_facing_initial = v.surface_facing_initial_frame
 
 		self.perform_pose_est_checkbox['state'] = 'normal'
 		self.save_and_update_button['state'] = 'normal'
@@ -272,6 +272,7 @@ class Dataset_Initialisation_GUI:
 			self.dataset_area_entry.delete(0, END)
 
 
+
 	def UpdateDatasetInformation(self):
 		if self.dataset_file != None:
 			if self.dataset_file.name != self.dataset_name_entry.get():
@@ -318,26 +319,29 @@ class VideoProcessing:
 
 		self.im = Image.fromarray(self.cv2resized)
 		self.frametk = ImageTk.PhotoImage(image=self.im)
+		print vid_url
 
 
 		#load in video and change to .wav for processing
-		if vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/sync_sony.MTS':
-			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy sync_sony.avi"
+		if vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/REF/forward_facing_video.MTS':
+			#vid_url = '/home/kylesm/Desktop/VRES/VRES_GUI/REF/'
+			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy forward_facing_video.avi"
 			print(command_1)
-			command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/sync_sony.avi -ab 160k -ac 2 -ar 44100 -vn sync_sony.wav"
+			command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/forward_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn forward_facing_video.wav"
 			subprocess.call(command_1, shell=True)
 			subprocess.call(command_2, shell=True)
 
-			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/sync_sony.wav",'r')
+			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/forward_facing_video.wav",'r')
 
-		elif vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/sync_iphone.MTS':
-			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy sync_iphone.avi"
+		elif vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/REF/surface_facing_video.MTS':
+
+			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy surface_facing_video.avi"
 			print(command_1)
-			command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/sync_iphone.avi -ab 160k -ac 2 -ar 44100 -vn sync_iphone.wav"
+			command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/surface_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn surface_facing_video.wav"
 			subprocess.call(command_1, shell=True)
 			subprocess.call(command_2, shell=True)
 
-			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/sync_iphone.wav",'r')
+			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/surface_facing_video.wav",'r')
 
 		#Extract Raw Audio from Wav File
 		self.wav_signal = spf.readframes(-1)
@@ -414,14 +418,11 @@ class VideoProcessing:
 		count = 0
 
 		while success:
-			success,frame = self.cap.read()
-			if success:
-				RGB_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-				#gray_resized = cv2.resize(gray, (300, 225))
+			success,raw_frame = self.cap.read()
 
 			print('Reading frame number %d' % count)
 
-			cv2.imwrite(os.path.join((path+name), name + "_frame_%05d.jpg" % count), RGB_frame)     # save frame as JPG file
+			cv2.imwrite(os.path.join((path+name), name + "_%05d.jpg" % count), raw_frame)     # save frame as JPG file
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				break
 			count += 1
@@ -439,8 +440,8 @@ class CameraLocGUI:
 		print vid_1_url
 		print vid_2_url
 
-		ONE = VideoProcessing("Video_1", vid_1_url)
-		TWO = VideoProcessing("Video_2", vid_2_url)
+		ONE = VideoProcessing("forward_facing_video", vid_1_url)
+		TWO = VideoProcessing("surface_facing_video", vid_2_url)
 
 
 		#setting the initial loaded frame
@@ -463,12 +464,12 @@ class CameraLocGUI:
 		
 		#plotting REF & QRY signal 
 		ONE.a.plot(ONE.t, ONE.new_signal)
-		ONE.a.set_title('REF Audio Signal')
+		ONE.a.set_title('Forward Facing Audio Signal')
 		ONE.a.set_xlabel('Frame')
 		ONE.a.set_ylabel('Amplitude')
 
 		TWO.a.plot(TWO.t, TWO.new_signal)
-		TWO.a.set_title('QRY Audio Signal')
+		TWO.a.set_title('Surface Facing Audio Signal')
 		TWO.a.set_xlabel('Frame')
 		TWO.a.set_ylabel('Amplitude')
 
@@ -490,22 +491,22 @@ class CameraLocGUI:
 		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=0, sticky=E)
 		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=6, sticky=E)
 
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("Video_1_search",ONE, TWO)).grid(row=5, column=2, sticky=W+E)
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("Video_2_search",ONE, TWO)).grid(row=5, column=8, sticky=W+E)
+		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("forward_facing_search",ONE, TWO)).grid(row=5, column=2, sticky=W+E)
+		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=5, column=8, sticky=W+E)
 
 		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=0, sticky=E)
 		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=6, sticky=E)
 
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("Video_1",ONE, TWO)).grid(row=6, column=2, sticky=W+E)
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("Video_2",ONE, TWO)).grid(row=6, column=8, sticky=W+E)
+		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("forward_facing",ONE, TWO)).grid(row=6, column=2, sticky=W+E)
+		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=6, column=8, sticky=W+E)
 
 		self.save_frames_button = Button(parent, text="Save Frames", command=lambda: self.set_and_download(ONE, TWO)).grid(row=10, column=4, columnspan=2)
 	
 		# setting scale buttons
-		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("Video_1_scale_up", ONE, TWO) )
-		self.ONE_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("Video_1_scale_down", ONE, TWO) )
-		self.TWO_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("Video_2_scale_up", ONE, TWO) )
-		self.TWO_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("Video_2_scale_down", ONE, TWO) )
+		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
+		self.ONE_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("forward_facing_scale_down", ONE, TWO) )
+		self.TWO_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("surface_facing_scale_up", ONE, TWO) )
+		self.TWO_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("surface_facing_scale_down", ONE, TWO) )
 
 		self.ONE_scale_down_button.grid(row=4, column=0,columnspan=2)
 		self.ONE_scale_up_button.grid(row=4, column=2, columnspan=2)
@@ -514,10 +515,10 @@ class CameraLocGUI:
 
 
 		#setting frame titles and corresponding number
-		ONE_title = Label(parent, text='Video One Frame\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 14), fg="red")
+		ONE_title = Label(parent, text='Forward Facing\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 14), fg="red")
 		ONE_title.grid(row=0, column=0,columnspan=6)
 
-		TWO_title = Label(parent, text='Video Two Frame\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 14), fg="red")
+		TWO_title = Label(parent, text='Surface Facing\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 14), fg="red")
 		TWO_title.grid(row=0, column=6,columnspan=6)
 
 		self.ONE_number = Label(parent, font=("Helvetica", 10), fg="red")
@@ -557,64 +558,59 @@ class CameraLocGUI:
 
 	def set_initial_frame(self, name, ONE, TWO):
 
-		if name == "Video_1":
-			self.video_1_initial_frame = self.initial_frame_ONE_entry.get()
-			print self.video_1_initial_frame
-			
+		if name == "forward_facing":
+			self.forward_facing_initial_frame = self.initial_frame_ONE_entry.get()			
 		
-		elif name == "Video_2":
-			self.video_2_initial_frame = self.initial_frame_TWO_entry.get()
-			print self.video_2_initial_frame
-			
+		elif name == "surface_facing":
+			self.surface_facing_initial_frame = self.initial_frame_TWO_entry.get()
 
 
 	#traverse through the frames	
 	def update(self, method, ONE, TWO):
 
-
-		if (method == "Video_1_scale_up") and (self.ONE_label_index != ONE.frame_total):
+		if (method == "forward_facing_scale_up") and (self.ONE_label_index != ONE.frame_total):
 			self.ONE_label_index += 1
 			ONE.NextFrame(self.ONE_label_index, ONE.url)
 			self.ONE_label.configure(image=ONE.next_frame)
 			self.ONE_label.image = ONE.next_frame
 
-		elif (method == "Video_1_scale_up") and (self.ONE_label_index == ONE.frame_total):
+		elif (method == "forward_facing_scale_up") and (self.ONE_label_index == ONE.frame_total):
 			self.ONE_label_index = 0
 			ONE.NextFrame(self.ONE_label_index, ONE.url)
 			self.ONE_label.configure(image=ONE.next_frame)
 			self.ONE_label.image = ONE.next_frame
 
-		elif (method == "Video_1_scale_down") and (self.ONE_label_index != 0):
+		elif (method == "forward_facing_scale_down") and (self.ONE_label_index != 0):
 			self.ONE_label_index -= 1
 			ONE.NextFrame(self.ONE_label_index, ONE.url)
 			self.ONE_label.configure(image=ONE.next_frame)
 			self.ONE_label.image = ONE.next_frame
 
-		elif (method == "Video_1_scale_down") and (self.ONE_label_index == 0):
+		elif (method == "forward_facing_scale_down") and (self.ONE_label_index == 0):
 			self.ONE_label_index = ONE.frame_total
 			ONE.NextFrame(self.ONE_label_index, ONE.url)
 			self.ONE_label.configure(image=ONE.next_frame)
 			self.ONE_label.image = ONE.next_frame
 
-		elif (method == "Video_2_scale_up") and (self.TWO_label_index != TWO.frame_total):
+		elif (method == "surface_facing_scale_up") and (self.TWO_label_index != TWO.frame_total):
 			self.TWO_label_index += 1
 			TWO.NextFrame(self.TWO_label_index, TWO.url)
 			self.TWO_label.configure(image=TWO.next_frame)
 			self.TWO_label.image = TWO.next_frame
 
-		elif (method == "Video_2_scale_up") and (self.TWO_label_index == TWO.frame_total):
+		elif (method == "surface_facing_scale_up") and (self.TWO_label_index == TWO.frame_total):
 			self.TWO_label_index = 0
 			TWO.NextFrame(self.TWO_label_index, TWO.url)
 			self.TWO_label.configure(image=TWO.next_frame)
 			self.TWO_label.image = TWO.next_frame
 
-		elif (method == "Video_2_scale_down") and (self.TWO_label_index != 0):
+		elif (method == "surface_facing_scale_down") and (self.TWO_label_index != 0):
 			self.TWO_label_index -= 1
 			TWO.NextFrame(self.TWO_label_index, TWO.url)
 			self.TWO_label.configure(image=TWO.next_frame)
 			self.TWO_label.image = TWO.next_frame
 
-		elif (method == "Video_2_scale_down") and (self.TWO_label_index == 0):
+		elif (method == "surface_facing_scale_down") and (self.TWO_label_index == 0):
 			self.TWO_label_index = TWO.frame_total
 			TWO.NextFrame(self.TWO_label_index, TWO.url)
 			self.TWO_label.configure(image=TWO.next_frame)
@@ -626,13 +622,13 @@ class CameraLocGUI:
 
 	def go_to_frame(self, search, ONE, TWO):
 
-		if search == "Video_1_search":
+		if search == "forward_facing_search":
 			self.ONE_label_index = self.ONE_entry.get()
 			ONE.GoToFrame(self.ONE_label_index, ONE.url)
 			self.ONE_label.configure(image=ONE.next_frame)
 			self.ONE_label.image = ONE.next_frame
 
-		elif search == "Video_2_search":
+		elif search == "surface_facing_search":
 			self.TWO_label_index = int(self.TWO_entry.get())
 			TWO.GoToFrame(self.TWO_label_index, TWO.url)
 			self.TWO_label.configure(image=TWO.next_frame)
@@ -644,10 +640,10 @@ class CameraLocGUI:
 
 	def set_and_download(self, ONE, TWO):
 
-		name_1 = "Video_1"
-		name_2 = "Video_2"
+		name_1 = "REF_forward_facing_images"
+		name_2 = "REF_surface_facing_images"
 
-		path = "/home/kylesm/Desktop/VRES/VRES_GUI/"
+		path = "/home/kylesm/Desktop/VRES/VRES_GUI/REF/"
 
 		os.makedirs(path+name_1)
 		os.makedirs(path+name_2)
@@ -712,9 +708,9 @@ def VisualOdometryVisualizations(current_image, previous_image, template_region,
 
 if __name__ == "__main__":
 
-	DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI'
-	DATASET_FILE_NAME = '/dataset.yaml'
-	IMAGE_SET_TO_USE = "Video_1"
+	DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/REF'
+	DATASET_FILE_NAME = '/REF_dataset.yaml'
+	IMAGE_SET_TO_USE = "REF_surface_images"
 	PARAMETER_FILE = '/home/kylesm/Desktop/VRES/map_generation/ParameterFile.yaml'
 
 	root = Tk()
@@ -736,12 +732,8 @@ if __name__ == "__main__":
 	parameter_file = IDME.ParameterFile(PARAMETER_FILE)
 	SAVE_ANALYSIS = True #GetParameterValue(parameter_file, "Save_Analysis")
 	START_FRAME = 0#GetParameterValue(parameter_file, "Start_Frame")
-	END_FRAME = 1199#GetParameterValue(parameter_file, "End_Frame")
-	if START_FRAME < 0:
-		START_FRAME = 0
-	if END_FRAME < 0:
-		END_FRAME = image_set.NumberOfImages()
-
+	END_FRAME = image_set.NumberOfImages() - 2
+	
 	PREDICTION_ON = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_On")
 	PREDICTION_PADDING = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_Padding")
 	FILTER_SIZE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Filter_Size")
@@ -754,7 +746,9 @@ if __name__ == "__main__":
 	GEOMETRIC_PIXEL_SCALE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Geometric_Pixel_Scale")
 	X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
 
+	# ADD POSE EST AND du,dv
 	dataset.AddMetadataField(image_set, 'VO_Pos', IDME.kValidTypes.CV_POINT3d)
+	dataset.AddMetadataField(image_set, 'Pixel_du_dv', IDME.kValidTypes.CV_POINT2i)
 	
 	# INIT VARIABLES
 	pixel_shift = [0, 0]
@@ -853,7 +847,8 @@ if __name__ == "__main__":
 
 		# SET VO POSITION IN ANALYSIS FILE
 		error = dataset.SetMetadataValue(image_set, filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
-		if error != IDME.IDME_OKAY:
+		error1 = dataset.SetMetadataValue(image_set, filename, "Pixel_du_dv", (pixel_shift[0], pixel_shift[1]))
+		if error1 != IDME.IDME_OKAY:
 			print "WARNING! Was unable to set the VO Position for image %s to (%d, %d, %d). Error Code %d"%(filename, position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2], error)
 
 	cv2.destroyAllWindows()
@@ -861,8 +856,7 @@ if __name__ == "__main__":
 
 	# WRITE OUT ANALYSIS FILE AND ADD TO DATASET FILE
 	if SAVE_ANALYSIS == True: 
-		#analysis_file.WriteFile()
-		#dataset.AddAnalysis(analysis_file)
+
 		dataset.WriteFiles()
 
 

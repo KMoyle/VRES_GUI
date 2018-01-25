@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import soundfile as sf 
 
 from numpy import arange
-import IDME
+import IDME    
 import os.path
 import sys
 from Tkinter import *
@@ -35,6 +35,52 @@ def FindBestMatch(confusion_matrix, index):
 	min_index = np.argmin(confusion_matrix[index, : ])
 
 	return min_index
+
+def UpdateAnalysisFile(analysis_file, filename, x_map, y_map, theta_map, ref_forwad_filename, ref_surface_filename):
+
+	#while array_index != image_index 
+
+	# SET VO POSITION IN ANALYSIS FILE
+	error1 = analysis_file.SetAnalysisValue(filename, "REF_forward_image", ref_forwad_filename)
+	#if error1 != IDME.IDME_OKAY:
+		#print "WARNING! Was unable to set the Forward REF Filename for image %s to %s. Error Code %d"%(filename,error1)
+
+	error2 = analysis_file.SetAnalysisValue(filename, "REF_surface_image", ref_surface_filename)
+	#if error2 != IDME.IDME_OKAY:
+		#print "WARNING! Was unable to set the Surface REF Filename for image %s to %s. Error Code %d"%(filename,error2)
+
+	error3 = analysis_file.SetAnalysisValue(filename, "position_in_reference_map", (x_map, y_map, theta_map))
+	#if error3 != IDME.IDME_OKAY:
+		#print "WARNING! Was unable to set the Position for image %s to (%d, %d, %d). Error Code %d"%(filename, x_map, y_map, theta_map, error3)
+
+# # SEARCH TIMESTAMP FOR CORRESPONDING FRAME
+# QRY_surface_index = GetMatchedIndex(QRY_dataset, QRY_forward_image_set, QRY_surface_image_set, QRY_forward_image_filenames, QRY_surface_image_filenames, "TimeStamp", image_index, step)
+# REF_surface_index = GetMatchedIndex(REF_dataset, REF_forward_image_set, REF_surface_image_set, REF_forward_image_filenames, REF_surface_image_filenames, "TimeStamp", idx, step)
+
+
+def GetMatchedIndex(dataset, current_imageset, search_imageset, current_filenames, search_filenames, metadata_value_name, index):
+	metadata_index = 0
+	END_FRAME = search_imageset.NumberOfImages() - 1
+
+	if dataset == REF_dataset:
+		forward_metadata_value = dataset.GetMetadataValue(current_imageset, current_filenames[index], metadata_value_name)
+	elif dataset == QRY_dataset:
+		forward_metadata_value = dataset.GetMetadataValue(current_imageset, current_filenames[index], metadata_value_name)
+
+	if forward_metadata_value == None:
+		print "The Metadata name %s could not be found within the parameter set %s."%(metadata_value_name, dataset.Name())
+		exit()
+	
+	while metadata_index != END_FRAME:
+
+		surface_metadata_value = dataset.GetMetadataValue(search_imageset, search_filenames[metadata_index], metadata_value_name)
+
+		if surface_metadata_value == forward_metadata_value:
+			break
+
+		metadata_index += 1
+
+	return metadata_index 
 
 def GetParameterValue(parameter_set, parameter_name):
 	parameter_value = parameter_set.GetParameterValue(parameter_name)
@@ -76,21 +122,22 @@ def VisualOdometryVisualizations(current_image, previous_image, template_region,
 if __name__ == "__main__":
 
 	# LOAD IN REF AND QRY DATA SETS 
-	REF_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI'
-	REF_DATASET_FILE_NAME = '/dataset.yaml'
+	REF_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/REF/'
+	REF_DATASET_FILE_NAME = 'REF_dataset.yaml'
 	REF_SURFACE_IMAGE_SET = "REF_surface_images"
 	REF_FORWARD_IMAGE_SET = "REF_forward_images"
 
-	QRY_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI'
-	QRY_DATASET_FILE_NAME = '/dataset.yaml'
-	QRY_SURFACE_IMAGE_SET = "REF_surface_images"
-	QRY_FORWARD_IMAGE_SET = "REF_forward_images"
+	QRY_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/QRY/'
+	QRY_DATASET_FILE_NAME = 'QRY_dataset.yaml'
+	QRY_SURFACE_IMAGE_SET = "QRY_surface_images"
+	QRY_FORWARD_IMAGE_SET = "QRY_forward_images"
 
 	# LOAD IN PARAMETER FILE
 	PARAMETER_FILE = '/home/kylesm/Desktop/VRES/map_generation/ParameterFile.yaml'
 	parameter_file = IDME.ParameterFile(PARAMETER_FILE)
 
 	# LOAD IN PARMETERS
+	SAVE_ANALYSIS = GetParameterValue(parameter_file, "Save_Analysis")
 	TEMPLATE_SIZE = GetParameterValue(parameter_file["Template_Matching_Parameters"], "Template_Size")
 	GEOMETRIC_PIXEL_SCALE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Geometric_Pixel_Scale")
 	X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
@@ -101,13 +148,30 @@ if __name__ == "__main__":
 	REF_surface_image_set = REF_dataset.GetImageSet(REF_SURFACE_IMAGE_SET)
 	REF_forward_image_set = REF_dataset.GetImageSet(REF_FORWARD_IMAGE_SET)
 
+	if REF_surface_image_set == None:
+		print "Failed to find the REF_surface_image_set within the dataset"
+		exit()
+	if REF_forward_image_set == None:
+		print "Failed to find the REF_forward_image_set within the dataset"
+		exit()
+
+	print QRY_DATASET_PATH + QRY_DATASET_FILE_NAME
+
 	QRY_dataset = IDME.DatasetFile(QRY_DATASET_PATH + QRY_DATASET_FILE_NAME)
 	QRY_surface_image_set = QRY_dataset.GetImageSet(QRY_SURFACE_IMAGE_SET)
 	QRY_forward_image_set = QRY_dataset.GetImageSet(QRY_FORWARD_IMAGE_SET)
 
+	if QRY_surface_image_set == None:
+		print "Failed to find the QRY_surface_image_set within the dataset"
+		exit()
+	if QRY_forward_image_set == None:
+		print "Failed to find the QRY_forward_image_set within the dataset"
+		exit()
+
 	#if image_set == None:
 	#	print "Failed to find the image set within the dataset"
 	#	exit()
+	print 
 
 	REF_forward_image_filenames = REF_dataset.GetImageFilenames(REF_forward_image_set)
 	REF_surface_image_filenames = REF_dataset.GetImageFilenames(REF_surface_image_set)
@@ -122,12 +186,8 @@ if __name__ == "__main__":
 	QRY_surface_END_FRAME = QRY_surface_image_set.NumberOfImages()
 	QRY_forward_END_FRAME = QRY_forward_image_set.NumberOfImages()
 
-	print "ref total %d" % int(REF_forward_END_FRAME)
-	print "qry total %d" % int(QRY_forward_END_FRAME)
-
 	step = 30
-	# PERFORM VISUAL ODOMETRY
-	SAVE_ANALYSIS = True	
+	# PERFORM VISUAL ODOMETRY	
 	START_FRAME = 0
 	END_FRAME = 1198
 	REF_image_index = 0
@@ -138,61 +198,63 @@ if __name__ == "__main__":
 	QRY_array = 0
 
 	# CREATE RESULTS SAVE DIRECTORY
-	REF_results_folder = REF_DATASET_PATH + "/Analyses"
+	#REF_results_folder = REF_DATASET_PATH + "/Analyses"
 	if SAVE_ANALYSIS:
-		REF_results_folder =  REF_DATASET_PATH + "/Analyses/Mapping_Analysis" + str(REF_dataset.NumberOfAnalyses("Mapping_Analysis"))
+		REF_results_folder =  REF_DATASET_PATH + "/Analyses/Mapping_Analysis_" + str(REF_dataset.NumberOfAnalyses("Mapping_Analysis"))
 
 	if not os.path.exists(REF_results_folder):
 		os.makedirs(REF_results_folder)
 
 	# CREATE RESULTS SAVE DIRECTORY
-	QRY_results_folder = QRY_DATASET_PATH + "/Analyses"
+	#QRY_results_folder = QRY_DATASET_PATH + "/Analyses"
 	if SAVE_ANALYSIS:
-		QRY_results_folder =  QRY_DATASET_PATH + "/Analyses/Mapping_Analysis" + str(QRY_dataset.NumberOfAnalyses("Mapping_Analysis"))
+		QRY_results_folder =  QRY_DATASET_PATH + "/Analyses/Mapping_Analysis_" + str(QRY_dataset.NumberOfAnalyses("Mapping_Analysis"))
 
 	if not os.path.exists(QRY_results_folder):
 		os.makedirs(QRY_results_folder)
 
 	# INITIALIZE ANALYSIS FILE, COPY PARAMETERS AND METADATA AND ADD VISUAL ODOMETRY FIELD
-	REF_analysis_file = IDME.GenericAnalysisFile("Mapping_Analysis", REF_dataset.GetDatasetFileInformation(), REF_results_folder + '/Mapping_Analysis.yaml')
+	REF_analysis_file = IDME.GenericAnalysisFile("Mapping_Analysis", REF_dataset.GetDatasetFileInformation(),REF_SURFACE_IMAGE_SET, QRY_dataset.GetDatasetFileInformation(),QRY_SURFACE_IMAGE_SET, REF_results_folder + "/Mapping_Analysis.yaml" )
 	REF_analysis_file.CopyParameterSetFromFile(parameter_file)
-	REF_analysis_file.CopyImageSetMetadataFrom(REF_surface_image_set, [])
+	REF_analysis_file.CopyImageSetMetadataFrom(QRY_surface_image_set, [])
+	REF_analysis_file.AddAnalysisField("REF_forward_image", IDME.kValidTypes.STRING)
+	REF_analysis_file.AddAnalysisField("REF_surface_image", IDME.kValidTypes.STRING)
 	REF_analysis_file.AddAnalysisField("position_in_reference_map", IDME.kValidTypes.CV_POINT3d)
 
 	# INITIALIZE ANALYSIS FILE, COPY PARAMETERS AND METADATA AND ADD VISUAL ODOMETRY FIELD
-	QRY_analysis_file = IDME.GenericAnalysisFile("Mapping_Analysis", QRY_dataset.GetDatasetFileInformation(), QRY_results_folder + '/Mapping_Analysis.yaml')
+	QRY_analysis_file = IDME.GenericAnalysisFile("Mapping_Analysis", REF_dataset.GetDatasetFileInformation(),REF_SURFACE_IMAGE_SET, QRY_dataset.GetDatasetFileInformation(),QRY_SURFACE_IMAGE_SET, QRY_results_folder + "/Mapping_Analysis.yaml" )
 	QRY_analysis_file.CopyParameterSetFromFile(parameter_file)
 	QRY_analysis_file.CopyImageSetMetadataFrom(QRY_surface_image_set, [])
+	QRY_analysis_file.AddAnalysisField("REF_forward_image", IDME.kValidTypes.STRING)
+	QRY_analysis_file.AddAnalysisField("REF_surface_image", IDME.kValidTypes.STRING)
 	QRY_analysis_file.AddAnalysisField("position_in_reference_map", IDME.kValidTypes.CV_POINT3d)
 
-	#REF_image = cv2.imread(REF_forward_image_set.Folder() + "/" + REF_forward_image_filenames[REF_image_index])
-	#cv2.imshow( "Display window", REF_image )
+	# confusion_matrix = np.zeros(((QRY_forward_END_FRAME/step),(REF_forward_END_FRAME/step)))
 
-	#cv2.waitKey(0)
+	# for QRY_image_index in range(0, QRY_forward_END_FRAME - 1, step):
 
-	#confusion_matrix = np.zeros(((QRY_forward_END_FRAME/step),(REF_forward_END_FRAME/step)))
-
-	# for QRY_image_index in range(0, QRY_forward_END_FRAME, step):
+	# 	if QRY_image_index > QRY_forward_END_FRAME:
+	# 		break
 
 	# 	#print "qry index %d" % QRY_image_index
 	# 	# GET FIRST REF IMAGE  
-	#  	QRY_image = cv2.imread(QRY_forward_image_set.Folder() + "/" + QRY_forward_image_filenames[QRY_image_index])
-	#  	QRY_image_gray = cv2.cvtColor(QRY_image,cv2.COLOR_BGR2GRAY)
+	#  	QRY_image_gray = cv2.imread(QRY_forward_image_set.Folder() + "/" + QRY_forward_image_filenames[QRY_image_index],cv2.IMREAD_GRAYSCALE)
+	#  	#QRY_image_gray = cv2.cvtColor(QRY_image,cv2.COLOR_BGR2GRAY)
 	#  	#cv2.imshow( "Display window", QRY_image_gray )
 	#  	#QRY_image_gray_normalized = cv2.normalize(QRY_image_gray.astype('float'), None, 0.0, 1.0, cv2.NORM_MINMAX)
 	#  	QRY_image_gray_resized = cv2.resize(QRY_image_gray, (100, 60))
 	#  	#QRY_image_gray_normalized_resized_histeq = cv2.equalizeHist(QRY_image_gray_normalized_resized)
 	#  	QRY_image_gray_resized_histeq = cv2.equalizeHist(QRY_image_gray_resized)
-	#  	print "QRY array %d" % QRY_array
+	#  	print "QRY_image_index %d" % QRY_image_index
 
 	# 	#print ""
 		
-	# 	for REF_image_index in range(0, REF_forward_END_FRAME, step):
+	# 	for REF_image_index in range(0, REF_forward_END_FRAME - 1, step):
 	# 		#print "ref index %d" % REF_image_index
 
 	# 	 	# GET FIRST REF IMAGE  
-	# 		REF_image = cv2.imread(REF_forward_image_set.Folder() + "/" + REF_forward_image_filenames[REF_image_index])
-	# 		REF_image_gray = cv2.cvtColor(REF_image,cv2.COLOR_BGR2GRAY)
+	# 		REF_image_gray = cv2.imread(REF_forward_image_set.Folder() + "/" + REF_forward_image_filenames[REF_image_index],cv2.IMREAD_GRAYSCALE)
+	# 		#REF_image_gray = cv2.cvtColor(REF_image,cv2.COLOR_BGR2GRAY)
 	# 		#cv2.imshow( "Display window", REF_image_gray )
 	# 		#REF_image_gray_normalized = cv2.normalize(REF_image_gray.astype('float'), None, 0.0, 1.0, cv2.NORM_MINMAX)
 	# 		REF_image_gray_resized = cv2.resize(REF_image_gray, (100, 60))
@@ -214,15 +276,16 @@ if __name__ == "__main__":
 	#  	QRY_image_index = QRY_image_index+step
 	#  	QRY_array = QRY_array+1
 
-	# # WRITE CONFUSION MATRIX
-	# cv2.imwrite("confusion_matrix.png", confusion_matrix)
+	# WRITE CONFUSION MATRIX
+	#cv2.imwrite("confusion_matrix.png", confusion_matrix)
 
 	confusion_matrix = cv2.imread("confusion_matrix.png")
 
 	confusion_matrix_gray = cv2.cvtColor(confusion_matrix,cv2.COLOR_BGR2GRAY)
 
 	confusion_length = QRY_forward_END_FRAME/step
-	print (len(confusion_matrix_gray)-1)
+
+	#print (len(confusion_matrix_gray)-1)
 
 	bestmatch_array = np.zeros((confusion_length,), dtype=np.int)
 
@@ -240,9 +303,7 @@ if __name__ == "__main__":
 		REF_image_resized = cv2.resize(REF_image, (600, 480))
 
 		# FILL BEST MATCH ARRAY 
-		bestmatch_array[idx] = best_match_index
-		print idx
-
+		bestmatch_array[idx] = best_match_index*step
 		matched_frames = np.hstack((QRY_image_resized,REF_image_resized))
 
 		# # PREVIEW IMAGES TO ENSURE MATCH
@@ -260,72 +321,89 @@ if __name__ == "__main__":
 		pixel_shift_history.append([None, None])
 	position_estimates = np.zeros((END_FRAME-START_FRAME+1, 3), float)
 
-	# INIT DISPLAY WINDOWS
-	cv2.namedWindow("QRY Frame", cv2.WINDOW_NORMAL)
-	cv2.namedWindow("REF Frame", cv2.WINDOW_NORMAL)
+	SURFACE_FRAME_COUNT = (QRY_surface_image_set.NumberOfImages())/step
 
+	#print SURFACE_FRAME_COUNT
 	array_index = 0
 	# PERFORM SURFACE IMAGE POSE ESTIMATION
 	for image_index in range(0, (len(bestmatch_array))):
-		array_index = array_index + 1
 		idx = bestmatch_array[image_index]
+
+
+		QRY_index = image_index * step
+
+		# SEARCH TIMESTAMP FOR CORRESPONDING FRAME
+		QRY_surface_index = GetMatchedIndex(QRY_dataset, QRY_forward_image_set, QRY_surface_image_set, QRY_forward_image_filenames, QRY_surface_image_filenames, "TimeStamp", QRY_index)
+		REF_surface_index = GetMatchedIndex(REF_dataset, REF_forward_image_set, REF_surface_image_set, REF_forward_image_filenames, REF_surface_image_filenames, "TimeStamp", idx)
 		
-		# LOAD IN SPECIFIC SURFACE IMAGES
-		QRY_surface_image = cv2.imread(QRY_surface_image_set.Folder() + "/" + QRY_surface_image_filenames[image_index*step], cv2.IMREAD_GRAYSCALE)
-		REF_surface_image = cv2.imread(REF_surface_image_set.Folder() + "/" + REF_surface_image_filenames[idx*step*2], cv2.IMREAD_GRAYSCALE)
+		if (QRY_surface_index < (QRY_surface_image_set.NumberOfImages() - 2)) and (REF_surface_index < (REF_surface_image_set.NumberOfImages()- 2)):
+			# LOAD IN SPECIFIC SURFACE IMAGES
+			QRY_surface_image = cv2.imread(QRY_surface_image_set.Folder() + "/" + QRY_surface_image_filenames[QRY_surface_index], cv2.IMREAD_GRAYSCALE)
+			REF_surface_image = cv2.imread(REF_surface_image_set.Folder() + "/" + REF_surface_image_filenames[REF_surface_index], cv2.IMREAD_GRAYSCALE)
 
-		# GET TEMPLATE REGION AND IMAGE
-		im_height, im_width = QRY_surface_image.shape[:2]
-		template_region = GetTemplateRegion(TEMPLATE_SIZE, im_width, im_height)
-		template = QRY_surface_image[template_region[1]:template_region[1]+template_region[3], template_region[0]:template_region[0]+template_region[2]]
-		
-		# GET PREDICTION REGION AND IMAGE
-		prediction_region = [0, 0, im_height, im_width]
-		prediction_region_image = REF_surface_image
-		
-		# PERFORM TEMPLATE MATCHING
-		match_result = cv2.matchTemplate(prediction_region_image, template, cv2.TM_CCOEFF_NORMED)
-		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match_result)
+			# GET TEMPLATE REGION AND IMAGE
+			im_height, im_width = QRY_surface_image.shape[:2]
+			template_region = GetTemplateRegion(TEMPLATE_SIZE, im_width, im_height)
+			template = QRY_surface_image[template_region[1]:template_region[1]+template_region[3], template_region[0]:template_region[0]+template_region[2]]
+			
+			# GET PREDICTION REGION AND IMAGE
+			prediction_region = [0, 0, im_height, im_width]
+			prediction_region_image = REF_surface_image
+			
+			# PERFORM TEMPLATE MATCHING
+			match_result = cv2.matchTemplate(prediction_region_image, template, cv2.TM_CCOEFF_NORMED)
+			min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match_result)
 
-		print image_index*step
-		print idx*step*2
+			# GET MATCHED REGION RECTANGLE LOCATION
+			rect_loc = [0,0]
+			rect_loc[0] = max_loc[0]
+			rect_loc[1] = max_loc[1]
 
-		# GET MATCHED REGION RECTANGLE LOCATION
-		rect_loc = [0,0]
-		rect_loc[0] = max_loc[0]
-		rect_loc[1] = max_loc[1]
+			# VISUALIZATIONS
+			#VisualOdometryVisualizations(REF_surface_image, QRY_surface_image, template_region)
 
-		# VISUALIZATIONS
-		VisualOdometryVisualizations(REF_surface_image, QRY_surface_image, template_region)
+			# END OF LOOP - UPDATE PREVIOUS IMAGE, UPDATE PIXEL SHIFTS, GET POSITION ESTIMATION, PERFORM POSITION SHIFT MOVING AVERAGING FILTER
+			first_iteration = False
+			pixel_shift[0] = template_region[0] - rect_loc[0]
+			pixel_shift[1] = template_region[1] - rect_loc[1]
 
-		# END OF LOOP - UPDATE PREVIOUS IMAGE, UPDATE PIXEL SHIFTS, GET POSITION ESTIMATION, PERFORM POSITION SHIFT MOVING AVERAGING FILTER
-		first_iteration = False
-		pixel_shift[0] = template_region[0] - rect_loc[0]
-		pixel_shift[1] = template_region[1] - rect_loc[1]
+			pixel_shift_history = pixel_shift_history[-1:] + pixel_shift_history[:-1]
+			pixel_shift_history[0][0] = pixel_shift[0]
+			pixel_shift_history[0][1] = pixel_shift[1]
 
-		pixel_shift_history = pixel_shift_history[-1:] + pixel_shift_history[:-1]
-		pixel_shift_history[0][0] = pixel_shift[0]
-		pixel_shift_history[0][1] = pixel_shift[1]
+			# POSITION ESTIMATES USING PROCESS DEFINED IN NOURANI VISUAL ODOMETRY PAPERS
+			delta_x = -pixel_shift[1] * GEOMETRIC_PIXEL_SCALE
+			delta_theta = -float(pixel_shift[0])/float(X_CAM) * GEOMETRIC_PIXEL_SCALE
 
-		# POSITION ESTIMATES USING PROCESS DEFINED IN NOURANI VISUAL ODOMETRY PAPERS
-		delta_x = -pixel_shift[1] * GEOMETRIC_PIXEL_SCALE
-		delta_theta = -float(pixel_shift[0])/float(X_CAM) * GEOMETRIC_PIXEL_SCALE
+			position_estimates[array_index, 2] =  delta_theta
+			position_estimates[array_index, 0] =  delta_x*np.cos(position_estimates[array_index-1, 2]) 
+			position_estimates[array_index, 1] =  delta_x*np.sin(position_estimates[array_index-1, 2])
 
-		position_estimates[array_index, 2] = 0 + delta_theta
-		position_estimates[array_index, 0] = 0 + delta_x*np.cos(position_estimates[array_index-1, 2]) 
-		position_estimates[array_index, 1] = 0 + delta_x*np.sin(position_estimates[array_index-1, 2])
+			REF_pose = REF_dataset.GetMetadataValue(REF_surface_image_set, REF_surface_image_filenames[REF_surface_index], "VO_Pos")
 
-		
-		print "x= %.3f" % position_estimates[array_index, 0]
-		print "y= %.3f" % position_estimates[array_index, 1]
-		print "theta= %.3f" % position_estimates[array_index, 2]
+			x_position_in_reference_map = REF_pose[0] - position_estimates[array_index, 0]
+			y_position_in_reference_map = REF_pose[1] - position_estimates[array_index, 1]
+			theta_position_in_reference_map = REF_pose[2] - position_estimates[array_index, 2]
 
-		raw_input("press enter")
+			print "x= %.3f" % x_position_in_reference_map
+			print "y= %.3f" % y_position_in_reference_map 
+			print "theta= %.3f" % theta_position_in_reference_map
 
-		# # SET VO POSITION IN ANALYSIS FILE
-		# error = analysis_file.SetAnalysisValue(filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
-		# if error != IDME.IDME_OKAY:
-		# 	print "WARNING! Was unable to set the VO Position for image %s to (%d, %d, %d). Error Code %d"%(filename, position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2], error)
+			#def UpdateAnalysisFile(analysis_file, filename, x_map, y_map, theta_map)
+			UpdateAnalysisFile(QRY_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index],QRY_surface_index,)
+			UpdateAnalysisFile(REF_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index],QRY_surface_index)
+
+		else:
+			break
+		#raw_input("press enter")
+	
+	QRY_analysis_file.WriteFile()
+	REF_analysis_file.WriteFile()
+	REF_dataset.AddAnalysis(REF_analysis_file)
+	QRY_dataset.AddAnalysis(QRY_analysis_file)
+	REF_dataset.WriteFiles()
+	QRY_dataset.WriteFiles()
+
 
 
 	
