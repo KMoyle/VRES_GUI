@@ -7,17 +7,40 @@ import struct
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+import Tkinter as Tk
+import PIL
+from PIL import ImageTk, Image
 from datetime import datetime, timedelta
 import soundfile as sf 
 
 from numpy import arange
 import IDME    
-import os.path
+import os.path 
 import sys
-from Tkinter import *
 from tkFileDialog import *
 from tkMessageBox import *
 from datetime import datetime
+
+#################################
+####### GENERIC FUNCTIONS #######
+#################################
+
+def GetParameterValue(parameter_set, parameter_name):
+	parameter_value = parameter_set.GetParameterValue(parameter_name)
+	if parameter_value == None:
+		print "The Parameter %s could not be found within the parameter set %s."%(parameter_name, parameter_set.Name())
+		exit()
+	return parameter_value
+
+def ConvertCV2ImageToTkImage(cv2_image, resize=None):
+	if resize != None:
+		cv2_image = cv2.resize(cv2_image, resize)
+
+	b,g,r = cv2.split(cv2_image)
+	image = cv2.merge((r,g,b))
+	image = Image.fromarray(cv2_image)
+
+	return ImageTk.PhotoImage(image=image)
 
 
 def ConvertCV2ImageToTkImage(cv2_image, resize=None):
@@ -29,6 +52,13 @@ def ConvertCV2ImageToTkImage(cv2_image, resize=None):
 	image = Image.fromarray(cv2_image)
 
 	return ImageTk.PhotoImage(image=image)
+	
+def GetImageSetNames(dataset):
+	image_set_names = []
+	for ii in range(0, dataset.NumberOfImageSets()):
+		image_set_names.append(dataset.GetImageSet(ii).Name())
+
+	return image_set_names
 
 def FindBestMatch(confusion_matrix, index):
 	
@@ -52,11 +82,6 @@ def UpdateAnalysisFile(analysis_file, filename, x_map, y_map, theta_map, ref_for
 	error3 = analysis_file.SetAnalysisValue(filename, "position_in_reference_map", (x_map, y_map, theta_map))
 	#if error3 != IDME.IDME_OKAY:
 		#print "WARNING! Was unable to set the Position for image %s to (%d, %d, %d). Error Code %d"%(filename, x_map, y_map, theta_map, error3)
-
-# # SEARCH TIMESTAMP FOR CORRESPONDING FRAME
-# QRY_surface_index = GetMatchedIndex(QRY_dataset, QRY_forward_image_set, QRY_surface_image_set, QRY_forward_image_filenames, QRY_surface_image_filenames, "TimeStamp", image_index, step)
-# REF_surface_index = GetMatchedIndex(REF_dataset, REF_forward_image_set, REF_surface_image_set, REF_forward_image_filenames, REF_surface_image_filenames, "TimeStamp", idx, step)
-
 
 def GetMatchedIndex(dataset, current_imageset, search_imageset, current_filenames, search_filenames, metadata_value_name, index):
 	metadata_index = 0
@@ -118,19 +143,172 @@ def VisualOdometryVisualizations(current_image, previous_image, template_region,
 	cv2.imshow("Current Frame", current_image_copy)
 	cv2.waitKey(1)
 
+class ProgramOptionSelectionGUI():
+	def __init__(self):
+
+		# TK ROOT GUI
+		self.root_gui = Tk.Tk()
+		self.root_gui.wm_title('Program Option Selection')
+		self.root_gui.protocol('WM_DELETE_WINDOW', self.CloseGUI)
+
+		# VARIABLES
+		self.dataset_file_path = ''
+		self.parameter_file_path = ''
+		self.image_set_to_use = ''
+		self.program_options_valid = False
+		self.map_preprocessing = Tk.BooleanVar()		
+
+		# INIT GUI WIDGETS
+		self.select_dataset_button = Tk.Button(self.root_gui, text='Select Dataset File', command=self.SelectDatasetFile)
+		self.select_dataset_button.grid(row=0, column=0, sticky=Tk.W+Tk.E)
+
+		self.dataset_file_label = Tk.Label(self.root_gui, text='<Please Select a Dataset File>', bg='#bbb')
+		self.dataset_file_label.grid(row=0, column=1, sticky=Tk.W+Tk.E)
+
+		self.select_parameter_button = Tk.Button(self.root_gui, text='Select Parameter File', command=self.SelectParameterFile)
+		self.select_parameter_button.grid(row=1, column=0, sticky=Tk.W+Tk.E)
+
+		self.parameter_file_label = Tk.Label(self.root_gui, text='<Please Select a Parameter File>', bg='#bbb')
+		self.parameter_file_label.grid(row=1, column=1, sticky=Tk.W+Tk.E)
+
+		self.forward_image_set_label_1 = Tk.Label(self.root_gui, text='Select Forward Facing Image Set: ')
+		self.forward_image_set_label_1.grid(row=2, column=0, columnspan=2, sticky=Tk.W+Tk.E)
+
+		self.forward_image_set_listbox_1 = Tk.Listbox(self.root_gui, exportselection=0, selectmode=Tk.SINGLE, state=Tk.NORMAL, bg='#bbb')
+		self.forward_image_set_listbox_1.grid(row=3, column=0, columnspan=2, sticky=Tk.W+Tk.E)
+
+		self.surface_image_set_label_2 = Tk.Label(self.root_gui, text='Select Surface Facing Image Set:')
+		self.surface_image_set_label_2.grid(row=4, column=0, columnspan=2, sticky=Tk.W+Tk.E)
+
+		self.surface_image_set_listbox_2 = Tk.Listbox(self.root_gui, exportselection=0, selectmode=Tk.SINGLE, state=Tk.NORMAL, bg='#bbb')
+		self.surface_image_set_listbox_2.grid(row=5, column=0, columnspan=2, sticky=Tk.W+Tk.E)
+		
+		self.finish_button = Tk.Button(self.root_gui, text='        GO       ', command=self.FinishButton)
+		self.finish_button.grid(row=6, column=0, columnspan=2, sticky=Tk.W+Tk.E)
+
+		# START MAINLOOP
+		self.root_gui.mainloop()
+
+
+	def CloseGUI(self):		
+		self.root_gui.destroy()
+		self.root_gui.quit()
+
+
+	def SelectDatasetFile(self):
+		# get filename and attempt to read it
+		filename = askopenfilename(initialdir = '/home/kylesm/Desktop/VRES/VRES_GUI', title='Select Dataset File', filetypes = (("Dataset Files", ("*.yaml","*.xml")), ("All Files", '*.*')))
+		self.file_name = os.path.basename(filename)
+
+		if filename:
+			try:
+				dataset_file = IDME.DatasetFile(filename)
+				self.dataset_file_label['text'] = filename
+				self.dataset_file_path = filename
+			except Exception as e:
+				self.dataset_file_label['text'] = '<Please Select a Dataset File>'
+				self.dataset_file_path = ''
+				showerror("Opening Dataset File", "Failed to open the selected file as a dataset file.\n'%s'"%filename)
+				return
+
+		# update image set list boxt
+		image_set_names = GetImageSetNames(dataset_file)
+		self.UpdateForwardImageSetNames(image_set_names)
+		self.UpdateSurfaceImageSetNames(image_set_names)
+
+
+		
+
+
+	def SelectParameterFile(self):
+		# get filename and attempt to read it
+		map_gen_folder = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+		filename = askopenfilename(initialdir = map_gen_folder, title='Select Parameter File', filetypes = (("Parameter Files", ("*.yaml","*.xml")), ("All Files", '*.*')))
+
+		if filename:
+			try:
+				dataset_file = IDME.ParameterFile(filename)
+				self.parameter_file_label['text'] = filename
+				self.parameter_file_path = filename
+			except Exception as e:
+				self.parameter_file_label['text'] = '<Please Select a Parameter File>'
+				self.parameter_file_path = ''
+				showerror("Opening Parameter File", "Failed to open the selected file as a parameter file.\n'%s'"%filename)
+
+
+	def UpdateForwardImageSetNames(self, image_set_names):
+		if len(image_set_names) != 0:
+			self.forward_image_set_listbox_1['state'] = Tk.NORMAL
+			self.forward_image_set_listbox_1['bg'] = '#fff'
+
+		self.forward_image_set_listbox_1.delete(0, Tk.END)
+		for image_set in image_set_names:
+			self.forward_image_set_listbox_1.insert(Tk.END, image_set)
+	
+	def UpdateSurfaceImageSetNames(self, image_set_names):
+		if len(image_set_names) != 0:
+			self.surface_image_set_listbox_2['state'] = Tk.NORMAL
+			self.surface_image_set_listbox_2['bg'] = '#fff'
+
+		self.surface_image_set_listbox_2.delete(0, Tk.END)
+		for image_set in image_set_names:
+			self.surface_image_set_listbox_2.insert(Tk.END, image_set)
+
+
+	def FinishButton(self):
+		if len(self.dataset_file_path) == 0:
+			showerror("Dataset File", "Please select a dataset.\n")
+			return
+		if len(self.parameter_file_path) == 0:
+			showerror("Parameter File", "Please select a parameter file to use.\n")
+			return
+
+		if self.forward_image_set_listbox_1.curselection() != ():
+			self.image_set_to_use_1 = self.forward_image_set_listbox_1.get(self.forward_image_set_listbox_1.curselection())
+
+		if self.surface_image_set_listbox_2.curselection() != ():
+			self.image_set_to_use_2 = self.surface_image_set_listbox_2.get(self.surface_image_set_listbox_2.curselection())
+
+		if len(self.image_set_to_use_1) == 0:
+			showerror("Dataset File", "Please select an image set to use.\n")
+			return
+
+		elif len(self.image_set_to_use_2) == 0:
+			showerror("Dataset File", "Please select an image set to use.\n")
+			return
+		
+		self.program_options_valid = True
+
+		self.CloseGUI()
 
 if __name__ == "__main__":
 
-	# LOAD IN REF AND QRY DATA SETS 
-	REF_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/REF/'
-	REF_DATASET_FILE_NAME = 'REF_dataset.yaml'
-	REF_SURFACE_IMAGE_SET = "REF_surface_images"
-	REF_FORWARD_IMAGE_SET = "REF_forward_images"
+	# GET PROGRAM OPTIONS USING GUI
+	REF = ProgramOptionSelectionGUI()
+	REF_Parameter_File = REF.parameter_file_path
+	REF_DATASET_PATH = REF.dataset_file_path
+	REF_DATASET_FILE_NAME = REF.file_name
+	REF_FORWARD_IMAGE_SET = REF.image_set_to_use_1
+	REF_SURFACE_IMAGE_SET = REF.image_set_to_use_2
 
-	QRY_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/QRY/'
-	QRY_DATASET_FILE_NAME = 'QRY_dataset.yaml'
-	QRY_SURFACE_IMAGE_SET = "QRY_surface_images"
-	QRY_FORWARD_IMAGE_SET = "QRY_forward_images"
+	# GET PROGRAM OPTIONS USING GUI
+	QRY = ProgramOptionSelectionGUI()
+	QRY_Parameter_File = QRY.parameter_file_path
+	QRY_DATASET_PATH = QRY.dataset_file_path
+	QRY_DATASET_FILE_NAME = QRY.file_name
+	QRY_FORWARD_IMAGE_SET = QRY.image_set_to_use_1
+	QRY_SURFACE_IMAGE_SET = QRY.image_set_to_use_2
+
+	# # LOAD IN REF AND QRY DATA SETS 
+	# REF_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/REF/'
+	# REF_DATASET_FILE_NAME = 'REF_dataset.yaml'
+	# REF_SURFACE_IMAGE_SET = "REF_surface_images"
+	# REF_FORWARD_IMAGE_SET = "REF_forward_images"
+
+	# QRY_DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/QRY/'
+	# QRY_DATASET_FILE_NAME = 'QRY_dataset.yaml'
+	# QRY_SURFACE_IMAGE_SET = "QRY_surface_images"
+	# QRY_FORWARD_IMAGE_SET = "QRY_forward_images"
 
 	# LOAD IN PARAMETER FILE
 	PARAMETER_FILE = '/home/kylesm/Desktop/VRES/map_generation/ParameterFile.yaml'
@@ -143,8 +321,9 @@ if __name__ == "__main__":
 	X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
 	FILTER_SIZE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Filter_Size")
 
+
 	# INITIALIZE DATASET FILE, GET IMAGE SET AND IMAGE FILENAMES
-	REF_dataset = IDME.DatasetFile(REF_DATASET_PATH + REF_DATASET_FILE_NAME)
+	REF_dataset = IDME.DatasetFile(REF_DATASET_PATH)
 	REF_surface_image_set = REF_dataset.GetImageSet(REF_SURFACE_IMAGE_SET)
 	REF_forward_image_set = REF_dataset.GetImageSet(REF_FORWARD_IMAGE_SET)
 
@@ -155,9 +334,7 @@ if __name__ == "__main__":
 		print "Failed to find the REF_forward_image_set within the dataset"
 		exit()
 
-	print QRY_DATASET_PATH + QRY_DATASET_FILE_NAME
-
-	QRY_dataset = IDME.DatasetFile(QRY_DATASET_PATH + QRY_DATASET_FILE_NAME)
+	QRY_dataset = IDME.DatasetFile(QRY_DATASET_PATH)
 	QRY_surface_image_set = QRY_dataset.GetImageSet(QRY_SURFACE_IMAGE_SET)
 	QRY_forward_image_set = QRY_dataset.GetImageSet(QRY_FORWARD_IMAGE_SET)
 
@@ -197,10 +374,18 @@ if __name__ == "__main__":
 	REF_array = 0
 	QRY_array = 0
 
+
 	# CREATE RESULTS SAVE DIRECTORY
 	#REF_results_folder = REF_DATASET_PATH + "/Analyses"
+	REF_PATH = os.path.split(REF_DATASET_PATH)
+	QRY_PATH = os.path.split(QRY_DATASET_PATH)
+
+	print REF_PATH[0]
+	print QRY_PATH[0]
+
+	
 	if SAVE_ANALYSIS:
-		REF_results_folder =  REF_DATASET_PATH + "/Analyses/Mapping_Analysis_" + str(REF_dataset.NumberOfAnalyses("Mapping_Analysis"))
+		REF_results_folder =  REF_PATH[0] + "/Analyses/Mapping_Analysis_" + (str(REF_dataset.NumberOfAnalyses("Mapping_Analysis")))
 
 	if not os.path.exists(REF_results_folder):
 		os.makedirs(REF_results_folder)
@@ -208,7 +393,7 @@ if __name__ == "__main__":
 	# CREATE RESULTS SAVE DIRECTORY
 	#QRY_results_folder = QRY_DATASET_PATH + "/Analyses"
 	if SAVE_ANALYSIS:
-		QRY_results_folder =  QRY_DATASET_PATH + "/Analyses/Mapping_Analysis_" + str(QRY_dataset.NumberOfAnalyses("Mapping_Analysis"))
+		QRY_results_folder =  QRY_PATH[0] + "/Analyses/Mapping_Analysis_" + (str(QRY_dataset.NumberOfAnalyses("Mapping_Analysis")))
 
 	if not os.path.exists(QRY_results_folder):
 		os.makedirs(QRY_results_folder)
@@ -390,8 +575,8 @@ if __name__ == "__main__":
 			print "theta= %.3f" % theta_position_in_reference_map
 
 			#def UpdateAnalysisFile(analysis_file, filename, x_map, y_map, theta_map)
-			UpdateAnalysisFile(QRY_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index],QRY_surface_index,)
-			UpdateAnalysisFile(REF_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index],QRY_surface_index)
+			UpdateAnalysisFile(QRY_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index])
+			UpdateAnalysisFile(REF_analysis_file, QRY_surface_image_filenames[QRY_surface_index], x_position_in_reference_map, y_position_in_reference_map, theta_position_in_reference_map, REF_forward_image_filenames[idx], REF_surface_image_filenames[REF_surface_index])
 
 		else:
 			break
