@@ -277,6 +277,8 @@ class Dataset_Initialisation_GUI:
 		if self.dataset_file != None:
 			if self.dataset_file.name != self.dataset_name_entry.get():
 				self.dataset_file.name = self.dataset_name_entry.get()
+				self.name = self.dataset_file.name
+				print self.name
 
 			if self.dataset_file.area != self.dataset_area_entry.get():
 				self.dataset_file.area = self.dataset_area_entry.get()
@@ -446,19 +448,19 @@ class CameraLocGUI:
 
 		#setting the initial loaded frame
 		self.imageframe_1 = Frame(parent)
-		self.imageframe_1.grid(row=1, column=1, columnspan=3)
+		self.imageframe_1.grid(row=1, column=0, columnspan=3)
 
 		self.imageframe_2 = Frame(parent)
-		self.imageframe_2.grid(row=1, column=7, columnspan=3)
+		self.imageframe_2.grid(row=1, column=3, columnspan=3)
 
 		# setting image frames
 		self.ONE_label = Label(self.imageframe_1, image=ONE.frametk)
-		self.ONE_label.grid(row=1, column=1)
+		self.ONE_label.grid(row=1, column=0)
 		self.ONE_label.image = ONE.frametk
 		self.ONE_label_index = 0
 
 		self.TWO_label = Label(self.imageframe_2, image=TWO.frametk)
-		self.TWO_label.grid(row=1, column=6)
+		self.TWO_label.grid(row=1, column=3)
 		self.TWO_label.image = TWO.frametk
 		self.TWO_label_index = 0
 		
@@ -478,29 +480,29 @@ class CameraLocGUI:
 		self.TWO_entry = Entry(parent)
 
 		self.ONE_entry.grid(row=5, column=1, sticky=W+E)
-		self.TWO_entry.grid(row=5, column=7, sticky=W+E)
+		self.TWO_entry.grid(row=5, column=4, sticky=W+E)
 
 		# setting t=0 frame entry
 		self.initial_frame_ONE_entry = Entry(parent)
 		self.initial_frame_TWO_entry = Entry(parent)
 
 		self.initial_frame_ONE_entry.grid(row=6, column=1, sticky=W+E)
-		self.initial_frame_TWO_entry.grid(row=6, column=7, sticky=W+E)
+		self.initial_frame_TWO_entry.grid(row=6, column=4, sticky=W+E)
 
 		# setting search buttons
-		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=0, sticky=E)
-		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=6, sticky=E)
+		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=0, sticky=W+E)
+		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=5, column=3, sticky=W+E)
 
 		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("forward_facing_search",ONE, TWO)).grid(row=5, column=2, sticky=W+E)
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=5, column=8, sticky=W+E)
+		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=5, column=5, sticky=W+E)
 
-		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=0, sticky=E)
-		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=6, sticky=E)
+		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=0, sticky=W+E)
+		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=6, column=3, sticky=W+E)
 
 		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("forward_facing",ONE, TWO)).grid(row=6, column=2, sticky=W+E)
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=6, column=8, sticky=W+E)
+		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=6, column=5, sticky=W+E)
 
-		self.save_frames_button = Button(parent, text="Save Frames", command=lambda: self.set_and_download(ONE, TWO)).grid(row=10, column=4, columnspan=2)
+		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=8, column=2, columnspan=2)
 	
 		# setting scale buttons
 		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
@@ -508,25 +510,25 @@ class CameraLocGUI:
 		self.TWO_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("surface_facing_scale_up", ONE, TWO) )
 		self.TWO_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("surface_facing_scale_down", ONE, TWO) )
 
-		self.ONE_scale_down_button.grid(row=4, column=0,columnspan=2)
-		self.ONE_scale_up_button.grid(row=4, column=2, columnspan=2)
-		self.TWO_scale_down_button.grid(row=4, column=6, columnspan=2)
-		self.TWO_scale_up_button.grid(row=4, column=8, columnspan=2)
+		self.ONE_scale_down_button.grid(row=4, column=0)
+		self.ONE_scale_up_button.grid(row=4, column=2)
+		self.TWO_scale_down_button.grid(row=4, column=3)
+		self.TWO_scale_up_button.grid(row=4, column=5)
 
 
 		#setting frame titles and corresponding number
 		ONE_title = Label(parent, text='Forward Facing\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 14), fg="red")
-		ONE_title.grid(row=0, column=0,columnspan=6)
+		ONE_title.grid(row=0, column=0,columnspan=3)
 
 		TWO_title = Label(parent, text='Surface Facing\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 14), fg="red")
-		TWO_title.grid(row=0, column=6,columnspan=6)
+		TWO_title.grid(row=0, column=3,columnspan=3)
 
 		self.ONE_number = Label(parent, font=("Helvetica", 10), fg="red")
-		self.ONE_number.grid(row=3, column=0,columnspan=6)
+		self.ONE_number.grid(row=3, column=0,columnspan=3)
 		self.ONE_number.configure(text='Frame Number %d' % self.ONE_label_index)
 
 		self.TWO_number = Label(parent, font=("Helvetica", 10), fg="red")
-		self.TWO_number.grid(row=3, column=6,columnspan=6)
+		self.TWO_number.grid(row=3, column=3,columnspan=3)
 		self.TWO_number.configure(text='Frame Number %d' % self.TWO_label_index)
 
 		# frame object for NAV bar
@@ -536,22 +538,22 @@ class CameraLocGUI:
 		# a tk.DrawingArea
 		ONE_canvas = FigureCanvasTkAgg(ONE.f, master=parent)
 		ONE_canvas.show()
-		ONE_canvas.get_tk_widget().grid(row=7, column=0,columnspan=6, rowspan=1)
+		ONE_canvas.get_tk_widget().grid(row=7, column=0,columnspan=3,sticky=W+E)
 
-		toolbar = NavigationToolbar2TkAgg(ONE_canvas, toolbar_frame_1)
-		toolbar.update()
-		ONE_canvas._tkcanvas.grid()
-		toolbar_frame_1.grid(row=9, column=1,columnspan=6, rowspan=1, sticky=W+S)
+		# toolbar = NavigationToolbar2TkAgg(ONE_canvas, toolbar_frame_1)
+		# toolbar.update()
+		# ONE_canvas._tkcanvas.grid()
+		# toolbar_frame_1.grid(row=9, column=1,columnspan=6, rowspan=1, sticky=W+S)
 
 
 		TWO_canvas = FigureCanvasTkAgg(TWO.f, master=parent)
 		TWO_canvas.show()
-		TWO_canvas.get_tk_widget().grid(row=7, column=6, columnspan=6, rowspan=1)
+		TWO_canvas.get_tk_widget().grid(row=7, column=3, columnspan=3,sticky=W+E)
 
-		toolbar_1 = NavigationToolbar2TkAgg(TWO_canvas, toolbar_frame_2)
-		toolbar_1.update()
-		TWO_canvas._tkcanvas.grid()
-		toolbar_frame_2.grid(row=9, column=7,columnspan=6, rowspan=1, sticky=W+S)
+		# toolbar_1 = NavigationToolbar2TkAgg(TWO_canvas, toolbar_frame_2)
+		# toolbar_1.update()
+		# TWO_canvas._tkcanvas.grid()
+		# toolbar_frame_2.grid(row=9, column=7,columnspan=6, rowspan=1, sticky=W+S)
 
 		#start mainloop
 		self.parent.mainloop()
