@@ -447,14 +447,14 @@ class CameraLocGUI:
 		ONE_title.grid(row=0, column=0,columnspan=3)
 
 		TWO_title = Label(parent, text='Surface Facing\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 14), fg="red")
-		TWO_title.grid(row=0, column=4,columnspan=3)
+		TWO_title.grid(row=0, column=3,columnspan=3)
 
 		self.ONE_number = Label(parent, font=("Helvetica", 10), fg="red")
 		self.ONE_number.grid(row=2, column=0,columnspan=3)
 		self.ONE_number.configure(text='Frame Number %d' % self.ONE_label_index)
 
 		self.TWO_number = Label(parent, font=("Helvetica", 10), fg="red")
-		self.TWO_number.grid(row=2, column=4,columnspan=3)
+		self.TWO_number.grid(row=2, column=3,columnspan=3)
 		self.TWO_number.configure(text='Frame Number %d' % self.TWO_label_index)
 
 		#setting the initial loaded frame
@@ -462,7 +462,7 @@ class CameraLocGUI:
 		self.imageframe_1.grid(row=1, column=0, columnspan=3)
 
 		self.imageframe_2 = Frame(parent)
-		self.imageframe_2.grid(row=1, column=4, columnspan=3)
+		self.imageframe_2.grid(row=1, column=3, columnspan=3)
 
 		# setting image frames
 		self.ONE_label = Label(self.imageframe_1, image=ONE.frametk)
@@ -478,7 +478,7 @@ class CameraLocGUI:
 		self.TWO_entry = Entry(parent)
 
 		self.ONE_entry.grid(row=5, column=1, sticky=W+E)
-		self.TWO_entry.grid(row=5, column=5, sticky=W+E)
+		self.TWO_entry.grid(row=5, column=4, sticky=W+E)
 
 		# setting scale buttons
 		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
@@ -488,28 +488,28 @@ class CameraLocGUI:
 
 		self.ONE_scale_down_button.grid(row=3, column=0)
 		self.ONE_scale_up_button.grid(row=3, column=2)
-		self.TWO_scale_down_button.grid(row=3, column=4)
-		self.TWO_scale_up_button.grid(row=3, column=6)
+		self.TWO_scale_down_button.grid(row=3, column=3)
+		self.TWO_scale_up_button.grid(row=3, column=5)
 
 		# setting search buttons
 		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=4, column=0, sticky=W+E)
-		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=4, column=4, sticky=W+E)
+		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=4, column=3, sticky=W+E)
 
 		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("forward_facing_search",ONE, TWO)).grid(row=4, column=2, sticky=W+E)
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=4, column=6, sticky=W+E)
+		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=4, column=5, sticky=W+E)
 
 		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=5, column=0, sticky=W+E)
-		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=5, column=4, sticky=W+E)
+		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=5, column=3, sticky=W+E)
 
 		# setting t=0 frame entry
 		self.initial_frame_ONE_entry = Entry(parent)
 		self.initial_frame_TWO_entry = Entry(parent)
 
 		self.initial_frame_ONE_entry.grid(row=5, column=1, sticky=W+E)
-		self.initial_frame_TWO_entry.grid(row=5, column=5, sticky=W+E)
+		self.initial_frame_TWO_entry.grid(row=5, column=4, sticky=W+E)
 
 		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("forward_facing",ONE, TWO)).grid(row=5, column=2, sticky=W+E)
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=5, column=6, sticky=W+E)
+		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=5, column=5, sticky=W+E)
 
 		#plotting REF & QRY signal 
 		ONE.a.plot(ONE.t, ONE.new_signal)
@@ -522,7 +522,7 @@ class CameraLocGUI:
 		TWO.a.set_xlabel('Frame')
 		TWO.a.set_ylabel('Amplitude')
 
-		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=6, column=3, columnspan=2)
+		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=6, column=2, columnspan=2)
 	
 		
 		# a tk.DrawingArea
@@ -533,7 +533,7 @@ class CameraLocGUI:
 
 		TWO_canvas = FigureCanvasTkAgg(TWO.f, master=parent)
 		TWO_canvas.show()
-		TWO_canvas.get_tk_widget().grid(row=6, column=4, columnspan=3)#,sticky=W+E)
+		TWO_canvas.get_tk_widget().grid(row=6, column=3, columnspan=3)#,sticky=W+E)
 
 		#start mainloop
 		self.parent.mainloop()
