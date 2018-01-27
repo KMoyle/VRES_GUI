@@ -520,9 +520,9 @@ class CameraLocGUI:
 		TWO.a.set_ylabel('Amplitude')
 
 		self.perform_pose_est_checkbox = Checkbutton(parent, text="Perform Pose Estimation.", variable=self.pose_est, onvalue=True, offvalue=False)
-		self.perform_pose_est_checkbox.grid(row=7, column=0, sticky=W+E)
+		self.perform_pose_est_checkbox.grid(row=7, column=0)
 
-		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=8, column=0, columnspan=2)
+		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=8, column=0)
 	
 		
 		# a tk.DrawingArea
