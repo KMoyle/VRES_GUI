@@ -35,9 +35,6 @@ class Dataset_Initialisation_GUI:
 		self.master.title("Localisation and Mapping Tool")
 		self.master.protocol("WM_DELETE_WINDOW", self.OnClosing)
 
-		# Variables
-		self.pose_est = BooleanVar()
-
 		# MENU
 		self.menubar = Menu(self.master)
 		self.filemenu = Menu(self.menubar, tearoff=0)
@@ -82,20 +79,15 @@ class Dataset_Initialisation_GUI:
 		self.video_2_file_label = Label(self.master, text='<Please Select a video File>', bg='#bbb')
 		self.video_2_file_label.grid(row=6, column=1, sticky=W+E)
 
-		self.perform_pose_est_checkbox = Checkbutton(self.master, text="Perform Pose Estimation.", variable=self.pose_est, onvalue=True, offvalue=False)
-		self.perform_pose_est_checkbox.grid(row=8, column=0, columnspan=2, sticky=W+E)
-
 		#go to visualisation gui
 		self.go_to_vis_gui_button = Button(self.master, text= "Go To Visualisation", state=DISABLED, command=self.GoToVisualisation)
 		self.go_to_vis_gui_button.grid(row=7, column=0, columnspan=2)
 
-		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata", command=self.SaveAndUpdate)
+		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata", state=DISABLED, command=self.SaveAndUpdate)
 		self.save_and_update_button.grid(row=9, column=0, columnspan=2)
 
 		# VARIABLES
 		self.dataset_file = None
-		self.video_1_initial = 0
-		self.video_2_initial = 0
 
 
 	def SetTimeStamps(self, dataset, image_set, start_time, fps, t_zero_frame):
@@ -121,8 +113,6 @@ class Dataset_Initialisation_GUI:
 	def GenerateDataset(self):
 
 		START_TIME = datetime.now()
-		CAMERA_1_FPS = 60
-		CAMERA_2_FPS = 60
 
 		self.dataset_file.AddImageSet('REF_forward_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_facing_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
 		self.dataset_file.AddImageSet('REF_surface_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_facing_images','/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
@@ -130,8 +120,8 @@ class Dataset_Initialisation_GUI:
 		self.meta_1 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
 		self.meta_2 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
 
-		self.SetTimeStamps(self.dataset_file, 'REF_forward_images', START_TIME, CAMERA_1_FPS, self.video_1_initial)
-		self.SetTimeStamps(self.dataset_file, 'REF_surface_images', START_TIME, CAMERA_2_FPS, self.video_2_initial)
+		self.SetTimeStamps(self.dataset_file, 'REF_forward_images', START_TIME, self.CAMERA_1_FPS, self.forward_facing_initial)
+		self.SetTimeStamps(self.dataset_file, 'REF_surface_images', START_TIME, self.CAMERA_2_FPS, self.surface_facing_initial)
 
 		self.dataset_file.WriteFiles()
 
@@ -184,14 +174,19 @@ class Dataset_Initialisation_GUI:
 		#self.dataset_file.WriteFiles()
 		self.gui_window = Toplevel(self.master)
 
-		print self.pose_est
-
 		v = CameraLocGUI(self.gui_window, self.forward_facing_file_path, self.surface_facing_file_path)
 
-		self.forward_facing_initial = v.forward_facing_initial_frame
-		self.surface_facing_initial = v.surface_facing_initial_frame
 
-		self.perform_pose_est_checkbox['state'] = 'normal'
+		self.forward_facing_initial = int(v.forward_facing_initial_frame)
+		self.surface_facing_initial = int(v.surface_facing_initial_frame)
+
+		self.CAMERA_1_FPS = v.ONE_fps
+		self.CAMERA_2_FPS = v.TWO_fps
+		self.Do_Pose = v.pose 
+
+		#print "forward facing %d surface facing %d" %(self.forward_facing_initial,self.surface_facing_initial)
+		#print "CAMERA_1_FPS  %d CAMERA_2_FPS %d" %(self.CAMERA_1_FPS,self.CAMERA_2_FPS)
+
 		self.save_and_update_button['state'] = 'normal'
 
 
@@ -410,23 +405,23 @@ class VideoProcessing:
 		self.next_frame = ImageTk.PhotoImage(image=self.im)
 
 	def SaveFrames(self, name, path, vid_url):
+		pass
+		# self.cap = cv2.VideoCapture()
+		# self.cap.open(vid_url)
 
-		self.cap = cv2.VideoCapture()
-		self.cap.open(vid_url)
-
-		success, self.frame = self.cap.read()
+		# success, self.frame = self.cap.read()
 		
-		count = 0
+		# count = 0
 
-		while success:
-			success,raw_frame = self.cap.read()
+		# while success:
+		# 	success,raw_frame = self.cap.read()
 
-			print('Reading frame number %d' % count)
+		# 	print('Reading frame number %d' % count)
 
-			cv2.imwrite(os.path.join((path+name), name + "_%05d.jpg" % count), raw_frame)     # save frame as JPG file
-			if cv2.waitKey(1) & 0xFF == ord('q'):
-				break
-			count += 1
+		# 	cv2.imwrite(os.path.join((path+name), name + "_%05d.jpg" % count), raw_frame)     # save frame as JPG file
+		# 	if cv2.waitKey(1) & 0xFF == ord('q'):
+		# 		break
+		# 	count += 1
 
 
 #localisation application class
@@ -435,13 +430,15 @@ class CameraLocGUI:
 	def __init__(self,parent, vid_1_url, vid_2_url):
 
 		self.parent = parent
+		self.pose_est = BooleanVar()
 
 		parent.title("Frame Comparison")
 		self.ONE_label_index = 0
 		self.TWO_label_index = 0
 		ONE = VideoProcessing("forward_facing_video", vid_1_url)
 		TWO = VideoProcessing("surface_facing_video", vid_2_url)
-
+		self.ONE_fps = ONE.fps
+		self.TWO_fps = TWO.fps
 		#setting frame titles and corresponding number
 		ONE_title = Label(parent, text='Forward Facing\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 14), fg="red")
 		ONE_title.grid(row=0, column=0,columnspan=3)
@@ -477,8 +474,8 @@ class CameraLocGUI:
 		self.ONE_entry = Entry(parent)
 		self.TWO_entry = Entry(parent)
 
-		self.ONE_entry.grid(row=5, column=1, sticky=W+E)
-		self.TWO_entry.grid(row=5, column=4, sticky=W+E)
+		self.ONE_entry.grid(row=4, column=1, sticky=W+E)
+		self.TWO_entry.grid(row=4, column=4, sticky=W+E)
 
 		# setting scale buttons
 		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
@@ -522,7 +519,10 @@ class CameraLocGUI:
 		TWO.a.set_xlabel('Frame')
 		TWO.a.set_ylabel('Amplitude')
 
-		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=6, column=2, columnspan=2)
+		self.perform_pose_est_checkbox = Checkbutton(parent, text="Perform Pose Estimation.", variable=self.pose_est, onvalue=True, offvalue=False)
+		self.perform_pose_est_checkbox.grid(row=7, column=0, sticky=W+E)
+
+		self.save_frames_button = Button(parent, text="SAVE FRAMES", command=lambda: self.set_and_download(ONE, TWO)).grid(row=8, column=0, columnspan=2)
 	
 		
 		# a tk.DrawingArea
@@ -537,6 +537,7 @@ class CameraLocGUI:
 
 		#start mainloop
 		self.parent.mainloop()
+
 
 	def set_initial_frame(self, name, ONE, TWO):
 
@@ -622,16 +623,17 @@ class CameraLocGUI:
 
 	def set_and_download(self, ONE, TWO):
 
-		name_1 = "REF_forward_facing_images"
-		name_2 = "REF_surface_facing_images"
+		self.pose = self.pose_est.get()
+		# name_1 = "REF_forward_facing_images"
+		# name_2 = "REF_surface_facing_images"
 
-		path = "/home/kylesm/Desktop/VRES/VRES_GUI/REF/"
+		# path = "/home/kylesm/Desktop/VRES/VRES_GUI/REF/"
 
-		os.makedirs(path+name_1)
-		os.makedirs(path+name_2)
+		# os.makedirs(path+name_1)
+		# os.makedirs(path+name_2)
 
-		ONE.SaveFrames(name_1, path, ONE.url)
-		TWO.SaveFrames(name_2, path, TWO.url)
+		# ONE.SaveFrames(name_1, path, ONE.url)
+		# TWO.SaveFrames(name_2, path, TWO.url)
 
 
 		self.parent.destroy()
@@ -700,156 +702,159 @@ if __name__ == "__main__":
 	loc_vis = Dataset_Initialisation_GUI(root)
 	root.mainloop()
 
+	if loc_vis.Do_Pose:
+		# INITIALIZE DATASET FILE, GET IMAGE SET AND IMAGE FILENAMES
+		dataset = IDME.DatasetFile(DATASET_PATH + DATASET_FILE_NAME)
+		image_set = dataset.GetImageSet(IMAGE_SET_TO_USE)
+		if image_set == None:
+			print "Failed to find the image set within the dataset"
+			exit()
+		image_filenames = dataset.GetImageFilenames(image_set)
+		
 
-# INITIALIZE DATASET FILE, GET IMAGE SET AND IMAGE FILENAMES
-	dataset = IDME.DatasetFile(DATASET_PATH + DATASET_FILE_NAME)
-	image_set = dataset.GetImageSet(IMAGE_SET_TO_USE)
-	if image_set == None:
-		print "Failed to find the image set within the dataset"
-		exit()
-	image_filenames = dataset.GetImageFilenames(image_set)
-	
+		# INITIALIZE PARAMETER FILE AND GET PARAMETERS
+		parameter_file = IDME.ParameterFile(PARAMETER_FILE)
+		SAVE_ANALYSIS = True #GetParameterValue(parameter_file, "Save_Analysis")
+		START_FRAME = 0#GetParameterValue(parameter_file, "Start_Frame")
+		END_FRAME = image_set.NumberOfImages() - 2
+		
+		PREDICTION_ON = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_On")
+		PREDICTION_PADDING = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_Padding")
+		FILTER_SIZE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Filter_Size")
 
-	# INITIALIZE PARAMETER FILE AND GET PARAMETERS
-	parameter_file = IDME.ParameterFile(PARAMETER_FILE)
-	SAVE_ANALYSIS = True #GetParameterValue(parameter_file, "Save_Analysis")
-	START_FRAME = 0#GetParameterValue(parameter_file, "Start_Frame")
-	END_FRAME = image_set.NumberOfImages() - 2
-	
-	PREDICTION_ON = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_On")
-	PREDICTION_PADDING = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Prediction_Padding")
-	FILTER_SIZE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Filter_Size")
+		CROP_ON = GetParameterValue(parameter_file["PreProcessing_Parameters"], "Crop_On")
+		CROP_REGION = GetParameterValue(parameter_file["PreProcessing_Parameters"], "Crop_Region")
 
-	CROP_ON = GetParameterValue(parameter_file["PreProcessing_Parameters"], "Crop_On")
-	CROP_REGION = GetParameterValue(parameter_file["PreProcessing_Parameters"], "Crop_Region")
+		TEMPLATE_SIZE = GetParameterValue(parameter_file["Template_Matching_Parameters"], "Template_Size")
 
-	TEMPLATE_SIZE = GetParameterValue(parameter_file["Template_Matching_Parameters"], "Template_Size")
+		GEOMETRIC_PIXEL_SCALE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Geometric_Pixel_Scale")
+		X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
 
-	GEOMETRIC_PIXEL_SCALE = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "Geometric_Pixel_Scale")
-	X_CAM = GetParameterValue(parameter_file["Visual_Odometry_Parameters"], "X_Cam")
+		# ADD POSE EST AND du,dv
+		dataset.AddMetadataField(image_set, 'VO_Pos', IDME.kValidTypes.CV_POINT3d)
+		dataset.AddMetadataField(image_set, 'Pixel_du_dv', IDME.kValidTypes.CV_POINT2i)
+		
+		# INIT VARIABLES
+		pixel_shift = [0, 0]
+		ave_pixel_shift = [None, None]
+		pixel_shift_history = []
+		for ii in range(0, FILTER_SIZE):
+			pixel_shift_history.append([None, None])
+		position_estimates = np.zeros((END_FRAME-START_FRAME+1, 3), float)
 
-	# ADD POSE EST AND du,dv
-	dataset.AddMetadataField(image_set, 'VO_Pos', IDME.kValidTypes.CV_POINT3d)
-	dataset.AddMetadataField(image_set, 'Pixel_du_dv', IDME.kValidTypes.CV_POINT2i)
-	
-	# INIT VARIABLES
-	pixel_shift = [0, 0]
-	ave_pixel_shift = [None, None]
-	pixel_shift_history = []
-	for ii in range(0, FILTER_SIZE):
-		pixel_shift_history.append([None, None])
-	position_estimates = np.zeros((END_FRAME-START_FRAME+1, 3), float)
+		# INIT DISPLAY WINDOWS
+		cv2.namedWindow("Previous Frame", cv2.WINDOW_NORMAL)
+		cv2.namedWindow("Current Frame", cv2.WINDOW_NORMAL)
 
-	# INIT DISPLAY WINDOWS
-	cv2.namedWindow("Previous Frame", cv2.WINDOW_NORMAL)
-	cv2.namedWindow("Current Frame", cv2.WINDOW_NORMAL)
+		# GET IMAGE FILENAMES
+		
 
-	# GET IMAGE FILENAMES
-	
-
-	# GET FIRST IMAGE SET TO PREVIOUS IMAGE (CROP IF REQUIRED)
-	previous_image = cv2.imread(image_set.Folder() + "/" + image_filenames[START_FRAME], cv2.IMREAD_GRAYSCALE)
-	if CROP_ON == True:
-		previous_image = previous_image[CROP_REGION[1]:CROP_REGION[1]+CROP_REGION[3], CROP_REGION[0]:CROP_REGION[0]+CROP_REGION[2]]
-
-	# PERFORM VISUAL ODOMETRY
-	image_index = START_FRAME
-	array_index = 0
-	while image_index != END_FRAME:
-		image_index = image_index+1
-		array_index = array_index + 1
-		filename = image_filenames[image_index]
-
-		# GET TEMPLATE REGION AND IMAGE
-		im_height, im_width = previous_image.shape[:2]
-		template_region = GetTemplateRegion(TEMPLATE_SIZE, im_width, im_height)
-		template = previous_image[template_region[1]:template_region[1]+template_region[3], template_region[0]:template_region[0]+template_region[2]]
-
-		# GET CURRENT IMAGE (CROP IMAGE IF REQUIRED)
-		current_image = cv2.imread(image_set.Folder() + "/" + filename, cv2.IMREAD_GRAYSCALE)
+		# GET FIRST IMAGE SET TO PREVIOUS IMAGE (CROP IF REQUIRED)
+		previous_image = cv2.imread(image_set.Folder() + "/" + image_filenames[START_FRAME], cv2.IMREAD_GRAYSCALE)
 		if CROP_ON == True:
-			current_image = current_image[CROP_REGION[1]:CROP_REGION[1]+CROP_REGION[3], CROP_REGION[0]:CROP_REGION[0]+CROP_REGION[2]]
+			previous_image = previous_image[CROP_REGION[1]:CROP_REGION[1]+CROP_REGION[3], CROP_REGION[0]:CROP_REGION[0]+CROP_REGION[2]]
 
-		# GET PREDICTION REGION AND IMAGE
-		im_height, im_width = current_image.shape[:2]
-		if image_index != START_FRAME+1 and PREDICTION_ON == True:
-			prediction_region = GetPredictionRegion(ave_pixel_shift, template_region, im_width, im_height, PREDICTION_PADDING)
-			prediction_region_image = current_image[prediction_region[1]:prediction_region[1]+prediction_region[3], prediction_region[0]:prediction_region[0]+prediction_region[2]]
-		else:
-			prediction_region = [0, 0, im_height, im_width]
-			prediction_region_image = current_image
+		# PERFORM VISUAL ODOMETRY
+		image_index = START_FRAME
+		array_index = 0
+		while image_index != END_FRAME:
+			image_index = image_index+1
+			array_index = array_index + 1
+			filename = image_filenames[image_index]
 
+			# GET TEMPLATE REGION AND IMAGE
+			im_height, im_width = previous_image.shape[:2]
+			template_region = GetTemplateRegion(TEMPLATE_SIZE, im_width, im_height)
+			template = previous_image[template_region[1]:template_region[1]+template_region[3], template_region[0]:template_region[0]+template_region[2]]
 
-		# PERFORM TEMPLATE MATCHING
-		match_result = cv2.matchTemplate(prediction_region_image, template, cv2.TM_CCOEFF_NORMED)
-		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match_result)
+			# GET CURRENT IMAGE (CROP IMAGE IF REQUIRED)
+			current_image = cv2.imread(image_set.Folder() + "/" + filename, cv2.IMREAD_GRAYSCALE)
+			if CROP_ON == True:
+				current_image = current_image[CROP_REGION[1]:CROP_REGION[1]+CROP_REGION[3], CROP_REGION[0]:CROP_REGION[0]+CROP_REGION[2]]
 
-		# GET MATCHED REGION RECTANGLE LOCATION
-		rect_loc = [0,0]
-		if PREDICTION_ON == True:
-			rect_loc[0] = prediction_region[0] + max_loc[0]
-			rect_loc[1] = prediction_region[1] + max_loc[1]
-		else:
-			rect_loc[0] = max_loc[0]
-			rect_loc[1] = max_loc[1]
-
-		# VISUALIZATIONS
-		if PREDICTION_ON:
-			VisualOdometryVisualizations(current_image, previous_image, template_region, prediction_region)
-		else:
-			VisualOdometryVisualizations(current_image, previous_image, template_region)
-
-		# END OF LOOP - UPDATE PREVIOUS IMAGE, UPDATE PIXEL SHIFTS, GET POSITION ESTIMATION, PERFORM POSITION SHIFT MOVING AVERAGING FILTER
-		first_iteration = False
-		previous_image = current_image
-		pixel_shift[0] = template_region[0] - rect_loc[0]
-		pixel_shift[1] = template_region[1] - rect_loc[1]
-
-		pixel_shift_history = pixel_shift_history[-1:] + pixel_shift_history[:-1]
-		pixel_shift_history[0][0] = pixel_shift[0]
-		pixel_shift_history[0][1] = pixel_shift[1]
-		ave_pixel_shift[0] = 0
-		ave_pixel_shift[1] = 0
-		count = 0
-		for shift in pixel_shift_history:
-			if shift[0] != None:
-				count = count + 1
-				ave_pixel_shift[0] = ave_pixel_shift[0] + shift[0]
-				ave_pixel_shift[1] = ave_pixel_shift[1] + shift[1]
-		ave_pixel_shift[0] = ave_pixel_shift[0]/count
-		ave_pixel_shift[1] = ave_pixel_shift[1]/count
-
-		# POSITION ESTIMATES USING PROCESS DEFINED IN NOURANI VISUAL ODOMETRY PAPERS
-		delta_x = -pixel_shift[1] * GEOMETRIC_PIXEL_SCALE
-		delta_theta = -float(pixel_shift[0])/float(X_CAM) * GEOMETRIC_PIXEL_SCALE
-
-		position_estimates[array_index, 2] = position_estimates[array_index-1, 2] + delta_theta
-		position_estimates[array_index, 0] = position_estimates[array_index-1, 0] + delta_x*np.cos(position_estimates[array_index-1, 2]) 
-		position_estimates[array_index, 1] = position_estimates[array_index-1, 1] + delta_x*np.sin(position_estimates[array_index-1, 2]) 
-
-		# SET VO POSITION IN ANALYSIS FILE
-		error = dataset.SetMetadataValue(image_set, filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
-		error1 = dataset.SetMetadataValue(image_set, filename, "Pixel_du_dv", (pixel_shift[0], pixel_shift[1]))
-		if error1 != IDME.IDME_OKAY:
-			print "WARNING! Was unable to set the VO Position for image %s to (%d, %d, %d). Error Code %d"%(filename, position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2], error)
-
-	cv2.destroyAllWindows()
+			# GET PREDICTION REGION AND IMAGE
+			im_height, im_width = current_image.shape[:2]
+			if image_index != START_FRAME+1 and PREDICTION_ON == True:
+				prediction_region = GetPredictionRegion(ave_pixel_shift, template_region, im_width, im_height, PREDICTION_PADDING)
+				prediction_region_image = current_image[prediction_region[1]:prediction_region[1]+prediction_region[3], prediction_region[0]:prediction_region[0]+prediction_region[2]]
+			else:
+				prediction_region = [0, 0, im_height, im_width]
+				prediction_region_image = current_image
 
 
-	# WRITE OUT ANALYSIS FILE AND ADD TO DATASET FILE
-	if SAVE_ANALYSIS == True: 
+			# PERFORM TEMPLATE MATCHING
+			match_result = cv2.matchTemplate(prediction_region_image, template, cv2.TM_CCOEFF_NORMED)
+			min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match_result)
 
-		dataset.WriteFiles()
+			# GET MATCHED REGION RECTANGLE LOCATION
+			rect_loc = [0,0]
+			if PREDICTION_ON == True:
+				rect_loc[0] = prediction_region[0] + max_loc[0]
+				rect_loc[1] = prediction_region[1] + max_loc[1]
+			else:
+				rect_loc[0] = max_loc[0]
+				rect_loc[1] = max_loc[1]
+
+			# VISUALIZATIONS
+			if PREDICTION_ON:
+				VisualOdometryVisualizations(current_image, previous_image, template_region, prediction_region)
+			else:
+				VisualOdometryVisualizations(current_image, previous_image, template_region)
+
+			# END OF LOOP - UPDATE PREVIOUS IMAGE, UPDATE PIXEL SHIFTS, GET POSITION ESTIMATION, PERFORM POSITION SHIFT MOVING AVERAGING FILTER
+			first_iteration = False
+			previous_image = current_image
+			pixel_shift[0] = template_region[0] - rect_loc[0]
+			pixel_shift[1] = template_region[1] - rect_loc[1]
+
+			pixel_shift_history = pixel_shift_history[-1:] + pixel_shift_history[:-1]
+			pixel_shift_history[0][0] = pixel_shift[0]
+			pixel_shift_history[0][1] = pixel_shift[1]
+			ave_pixel_shift[0] = 0
+			ave_pixel_shift[1] = 0
+			count = 0
+			for shift in pixel_shift_history:
+				if shift[0] != None:
+					count = count + 1
+					ave_pixel_shift[0] = ave_pixel_shift[0] + shift[0]
+					ave_pixel_shift[1] = ave_pixel_shift[1] + shift[1]
+			ave_pixel_shift[0] = ave_pixel_shift[0]/count
+			ave_pixel_shift[1] = ave_pixel_shift[1]/count
+
+			# POSITION ESTIMATES USING PROCESS DEFINED IN NOURANI VISUAL ODOMETRY PAPERS
+			delta_x = -pixel_shift[1] * GEOMETRIC_PIXEL_SCALE
+			delta_theta = -float(pixel_shift[0])/float(X_CAM) * GEOMETRIC_PIXEL_SCALE
+
+			position_estimates[array_index, 2] = position_estimates[array_index-1, 2] + delta_theta
+			position_estimates[array_index, 0] = position_estimates[array_index-1, 0] + delta_x*np.cos(position_estimates[array_index-1, 2]) 
+			position_estimates[array_index, 1] = position_estimates[array_index-1, 1] + delta_x*np.sin(position_estimates[array_index-1, 2]) 
+
+			# SET VO POSITION IN ANALYSIS FILE
+			error = dataset.SetMetadataValue(image_set, filename, "VO_Pos", (position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2]))
+			error1 = dataset.SetMetadataValue(image_set, filename, "Pixel_du_dv", (pixel_shift[0], pixel_shift[1]))
+			if error1 != IDME.IDME_OKAY:
+				print "WARNING! Was unable to set the VO Position for image %s to (%d, %d, %d). Error Code %d"%(filename, position_estimates[array_index, 0], position_estimates[array_index, 1], position_estimates[array_index, 2], error)
+
+		cv2.destroyAllWindows()
 
 
-	# POSITION PLOT
-	fig = plt.figure()
-	plt.suptitle('Visual Odometry Position')
-	plt.xlabel('X Position (m)')
-	plt.ylabel('Y Position (m)')
-	plt.plot(position_estimates[:,0], position_estimates[:,1], marker='x', color='b')
-	plt.axis('equal')
-	plt.show()
+		# WRITE OUT ANALYSIS FILE AND ADD TO DATASET FILE
+		if SAVE_ANALYSIS == True: 
+
+			dataset.WriteFiles()
+
+
+		# POSITION PLOT
+		fig = plt.figure()
+		plt.suptitle('Visual Odometry Position')
+		plt.xlabel('X Position (m)')
+		plt.ylabel('Y Position (m)')
+		plt.plot(position_estimates[:,0], position_estimates[:,1], marker='x', color='b')
+		plt.axis('equal')
+		plt.show()
+
+	else:
+		pass
 
 
 
