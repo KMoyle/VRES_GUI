@@ -32,7 +32,7 @@ class Dataset_Initialisation_GUI:
 	
 		# TKINTER WIDGES
 		self.master = master
-		self.master.title("Localisation and Mapping Tool")
+		self.master.title("Dataset Creation")
 		self.master.protocol("WM_DELETE_WINDOW", self.OnClosing)
 
 		# MENU
@@ -83,7 +83,7 @@ class Dataset_Initialisation_GUI:
 		self.go_to_vis_gui_button = Button(self.master, text= "Go To Visualisation", state=DISABLED, command=self.GoToVisualisation)
 		self.go_to_vis_gui_button.grid(row=7, column=0, columnspan=2)
 
-		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata", state=DISABLED, command=self.SaveAndUpdate)
+		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata", command=self.SaveAndUpdate)
 		self.save_and_update_button.grid(row=9, column=0, columnspan=2)
 
 		# VARIABLES
@@ -114,14 +114,14 @@ class Dataset_Initialisation_GUI:
 
 		START_TIME = datetime.now()
 
-		self.dataset_file.AddImageSet('REF_forward_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_facing_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
-		self.dataset_file.AddImageSet('REF_surface_images', '/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_facing_images','/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
+		self.dataset_file.AddImageSet(self.dataset_file.name + '_forward_images', '/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_forward_facing_images', '/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_forward_images_meta.yaml')
+		self.dataset_file.AddImageSet(self.dataset_file.name + '_surface_images', '/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_surface_facing_images','/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_surface_images_meta.yaml')
 
-		self.meta_1 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_forward_images_meta.yaml')
-		self.meta_2 = IDME.MetadataFile('/home/kylesm/Desktop/VRES/VRES_GUI/REF/REF_surface_images_meta.yaml')
+		self.meta_1 = IDME.MetadataFile('/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_forward_images_meta.yaml')
+		self.meta_2 = IDME.MetadataFile('/home/kyle/Desktop/VRES/REF/'+ self.dataset_file.name + '_surface_images_meta.yaml')
 
-		self.SetTimeStamps(self.dataset_file, 'REF_forward_images', START_TIME, self.CAMERA_1_FPS, self.forward_facing_initial)
-		self.SetTimeStamps(self.dataset_file, 'REF_surface_images', START_TIME, self.CAMERA_2_FPS, self.surface_facing_initial)
+		self.SetTimeStamps(self.dataset_file, self.dataset_file.name + '_forward_images', START_TIME, self.CAMERA_1_FPS, self.forward_facing_initial)
+		self.SetTimeStamps(self.dataset_file, self.dataset_file.name + '_surface_images', START_TIME, self.CAMERA_2_FPS, self.surface_facing_initial)
 
 		self.dataset_file.WriteFiles()
 
@@ -142,7 +142,7 @@ class Dataset_Initialisation_GUI:
 
 	def SelectVideoFile(self, vid_name):
 		# get filename and attempt to read it
-		map_gen_folder = "/home/kylesm/Desktop/VRES/VRES_GUI/"
+		map_gen_folder = "/home/kyle/Desktop/VRES/"
 		filename = askopenfilename(initialdir = map_gen_folder, title='Select Video File', filetypes = (("Video Files", ("*.MTS","*.mov","*.avi")), ("All Files", '*.*')))
 
 		print filename
@@ -174,7 +174,7 @@ class Dataset_Initialisation_GUI:
 		#self.dataset_file.WriteFiles()
 		self.gui_window = Toplevel(self.master)
 
-		v = CameraLocGUI(self.gui_window, self.forward_facing_file_path, self.surface_facing_file_path)
+		v = CameraLocGUI(self.gui_window, self.dataset_file.name, self.forward_facing_file_path, self.surface_facing_file_path)
 
 
 		self.forward_facing_initial = int(v.forward_facing_initial_frame)
@@ -301,7 +301,7 @@ class VideoProcessing:
 		#success,frame = vid.read()
 
 		self.fps = round(float(self.vid.get(cv2.CAP_PROP_FPS)))
-		self.frame_total = (int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))) - 2
+		self.frame_total = (int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))) - 3
 
 		print self.fps
 		print self.frame_total
@@ -312,7 +312,7 @@ class VideoProcessing:
 		_, self.frame = self.vid.read()
 
 		self.cv2image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGBA)
-		self.cv2resized = cv2.resize(self.cv2image, (640,480))
+		self.cv2resized = cv2.resize(self.cv2image, (320,240))
 
 		self.im = Image.fromarray(self.cv2resized)
 		self.frametk = ImageTk.PhotoImage(image=self.im)
@@ -320,24 +320,21 @@ class VideoProcessing:
 
 
 		#load in video and change to .wav for processing
-		if vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/REF/forward_facing_video.MTS':
-			#command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy forward_facing_video.avi"
-			#print(command_1)
-			#command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/forward_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn forward_facing_video.wav"
-			#subprocess.call(command_1, shell=True)
-			#subprocess.call(command_2, shell=True)
+		if vid_url == '/home/kyle/Desktop/VRES/REF/forward_facing_video.MTS':
+			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy forward_facing_video.avi"
+			command_2 = "ffmpeg -i /home/kyle/Desktop/VRES/VRES_GUI/forward_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn forward_facing_video.wav"
+			subprocess.call(command_1, shell=True)
+			subprocess.call(command_2, shell=True)
 
-			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/forward_facing_video.wav",'r')
+			spf = wave.open("/home/kyle/Desktop/VRES/VRES_GUI/forward_facing_video.wav",'r')
 
-		elif vid_url == '/home/kylesm/Desktop/VRES/VRES_GUI/REF/surface_facing_video.MTS':
+		elif vid_url == '/home/kyle/Desktop/VRES/REF/surface_facing_video.MTS':
+			command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy surface_facing_video.avi"
+			command_2 = "ffmpeg -i /home/kyle/Desktop/VRES/VRES_GUI/surface_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn surface_facing_video.wav"
+			subprocess.call(command_1, shell=True)
+			subprocess.call(command_2, shell=True)
 
-			#command_1 = "ffmpeg -i " + vid_url + " -acodec copy -vcodec copy surface_facing_video.avi"
-			#print(command_1)
-			#command_2 = "ffmpeg -i /home/kylesm/Desktop/VRES/VRES_GUI/surface_facing_video.avi -ab 160k -ac 2 -ar 44100 -vn surface_facing_video.wav"
-			#subprocess.call(command_1, shell=True)
-			#subprocess.call(command_2, shell=True)
-
-			spf = wave.open("/home/kylesm/Desktop/VRES/VRES_GUI/surface_facing_video.wav",'r')
+			spf = wave.open("/home/kyle/Desktop/VRES/VRES_GUI/surface_facing_video.wav",'r')
 
 		#Extract Raw Audio from Wav File
 		self.wav_signal = spf.readframes(-1)
@@ -359,7 +356,7 @@ class VideoProcessing:
 		upper_frame = float(upper_percent)*int(self.frame_total)
 
 		#creating a figure to house the audio signal plot
-		self.f = Figure(figsize=(6,3),dpi=100)
+		self.f = Figure(figsize=(4,2),dpi=100)
 		self.a = self.f.add_subplot(111)
 		self.plot_length = len(self.new_signal)
 
@@ -389,7 +386,6 @@ class VideoProcessing:
 		self.next_frame = ImageTk.PhotoImage(image=self.im)
 
 	def GoToFrame(self, new_frame, vid_url):
-
 		self.cap = cv2.VideoCapture()
 		self.cap.open(vid_url)
 
@@ -405,32 +401,31 @@ class VideoProcessing:
 		self.next_frame = ImageTk.PhotoImage(image=self.im)
 
 	def SaveFrames(self, name, path, vid_url):
-		pass
-		# self.cap = cv2.VideoCapture()
-		# self.cap.open(vid_url)
+		self.cap = cv2.VideoCapture()
+		self.cap.open(vid_url)
 
-		# success, self.frame = self.cap.read()
+		success, self.frame = self.cap.read()
 		
-		# count = 0
+		count = 0
 
-		# while success:
-		# 	success,raw_frame = self.cap.read()
+		while success:
+			success,raw_frame = self.cap.read()
 
-		# 	print('Reading frame number %d' % count)
+		 	print('Reading frame number %d' % count)
 
-		# 	cv2.imwrite(os.path.join((path+name), name + "_%05d.jpg" % count), raw_frame)     # save frame as JPG file
-		# 	if cv2.waitKey(1) & 0xFF == ord('q'):
-		# 		break
-		# 	count += 1
+		 	cv2.imwrite(os.path.join((path+name), name + "_%05d.jpg" % count), raw_frame)     # save frame as JPG file
+		 	if cv2.waitKey(1) & 0xFF == ord('q'):
+		 		break
+		 	count += 1
 
-
-#localisation application class
+# 
 class CameraLocGUI:
 
-	def __init__(self,parent, vid_1_url, vid_2_url):
+	def __init__(self,parent, dataset_name, vid_1_url, vid_2_url):
 
 		self.parent = parent
 		self.pose_est = BooleanVar()
+		self.dataset_name = dataset_name
 
 		parent.title("Frame Comparison")
 		self.ONE_label_index = 0
@@ -440,26 +435,26 @@ class CameraLocGUI:
 		self.ONE_fps = ONE.fps
 		self.TWO_fps = TWO.fps
 		#setting frame titles and corresponding number
-		ONE_title = Label(parent, text='Forward Facing\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 14), fg="red")
-		ONE_title.grid(row=0, column=0,columnspan=3)
+		ONE_title = Label(parent, text='Forward Facing\nfps = %d  frames = %d' % (ONE.fps, ONE.frame_total), font=("Helvetica", 9), fg="red")
+		ONE_title.grid(row=0, column=0,columnspan=2)
 
-		TWO_title = Label(parent, text='Surface Facing\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 14), fg="red")
-		TWO_title.grid(row=0, column=3,columnspan=3)
+		TWO_title = Label(parent, text='Surface Facing\nfps = %d  frames = %d' % (TWO.fps, TWO.frame_total), font=("Helvetica", 9), fg="red")
+		TWO_title.grid(row=0, column=2,columnspan=2)
 
-		self.ONE_number = Label(parent, font=("Helvetica", 10), fg="red")
+		self.ONE_number = Label(parent, font=("Helvetica", 7), fg="red")
 		self.ONE_number.grid(row=2, column=0,columnspan=3)
 		self.ONE_number.configure(text='Frame Number %d' % self.ONE_label_index)
 
-		self.TWO_number = Label(parent, font=("Helvetica", 10), fg="red")
-		self.TWO_number.grid(row=2, column=3,columnspan=3)
+		self.TWO_number = Label(parent, font=("Helvetica", 7), fg="red")
+		self.TWO_number.grid(row=2, column=2,columnspan=3)
 		self.TWO_number.configure(text='Frame Number %d' % self.TWO_label_index)
 
 		#setting the initial loaded frame
 		self.imageframe_1 = Frame(parent)
-		self.imageframe_1.grid(row=1, column=0, columnspan=3)
+		self.imageframe_1.grid(row=1, column=0, columnspan=2)
 
 		self.imageframe_2 = Frame(parent)
-		self.imageframe_2.grid(row=1, column=3, columnspan=3)
+		self.imageframe_2.grid(row=1, column=2, columnspan=2)
 
 		# setting image frames
 		self.ONE_label = Label(self.imageframe_1, image=ONE.frametk)
@@ -470,43 +465,44 @@ class CameraLocGUI:
 		self.TWO_label.grid(row=0, column=0)
 		self.TWO_label.image = TWO.frametk
 		
+
+		# setting scale buttons
+		self.ONE_scale_up_button = Button(parent, text="  Next Frame  ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
+		self.ONE_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("forward_facing_scale_down", ONE, TWO) )
+		self.TWO_scale_up_button = Button(parent, text="  Next Frame  ", command=lambda: self.update("surface_facing_scale_up", ONE, TWO) )
+		self.TWO_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("surface_facing_scale_down", ONE, TWO) )
+
+		self.ONE_scale_down_button.grid(row=3, column=0)
+		self.ONE_scale_up_button.grid(row=3, column=1)
+		self.TWO_scale_down_button.grid(row=3, column=2)
+		self.TWO_scale_up_button.grid(row=3, column=3)
+		
 		# setting frame search entry
 		self.ONE_entry = Entry(parent)
 		self.TWO_entry = Entry(parent)
 
-		self.ONE_entry.grid(row=4, column=1, sticky=W+E)
-		self.TWO_entry.grid(row=4, column=4, sticky=W+E)
-
-		# setting scale buttons
-		self.ONE_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("forward_facing_scale_up", ONE, TWO) )
-		self.ONE_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("forward_facing_scale_down", ONE, TWO) )
-		self.TWO_scale_up_button = Button(parent, text="  Next Frame ", command=lambda: self.update("surface_facing_scale_up", ONE, TWO) )
-		self.TWO_scale_down_button = Button(parent, text="Previous Frame", command=lambda: self.update("surface_facing_scale_down", ONE, TWO) )
-
-		self.ONE_scale_down_button.grid(row=3, column=0)
-		self.ONE_scale_up_button.grid(row=3, column=2)
-		self.TWO_scale_down_button.grid(row=3, column=3)
-		self.TWO_scale_up_button.grid(row=3, column=5)
+		self.ONE_entry.grid(row=4, column=0, sticky=E)
+		self.TWO_entry.grid(row=4, column=2, sticky=E)
 
 		# setting search buttons
-		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=4, column=0, sticky=W+E)
-		Label(parent, text="Go to Frame Number",font=("Helvetica", 14), fg="red").grid(row=4, column=3, sticky=W+E)
+		Label(parent, text="Go to Frame Number",font=("Helvetica", 8), fg="red").grid(row=4, column=0, sticky=W)
+		Label(parent, text="Go to Frame Number",font=("Helvetica", 8), fg="red").grid(row=4, column=2, sticky=W)
 
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("forward_facing_search",ONE, TWO)).grid(row=4, column=2, sticky=W+E)
-		Button(parent, text='   GO   ', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=4, column=5, sticky=W+E)
+		Button(parent, text='GO', command=lambda: self.go_to_frame("forward_facing_search",ONE, TWO)).grid(row=4, column=1, sticky=W+E)
+		Button(parent, text='GO', command=lambda: self.go_to_frame("surface_facing_search",ONE, TWO)).grid(row=4, column=3, sticky=W+E)
 
-		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=5, column=0, sticky=W+E)
-		Label(parent, text="Set t=0 Frame",font=("Helvetica", 14), fg="red").grid(row=5, column=3, sticky=W+E)
+		Label(parent, text="t=0 Frame",font=("Helvetica", 8), fg="red").grid(row=5, column=0, sticky=W)
+		Label(parent, text="t=0 Frame",font=("Helvetica", 8), fg="red").grid(row=5, column=2, sticky=W)
 
 		# setting t=0 frame entry
 		self.initial_frame_ONE_entry = Entry(parent)
 		self.initial_frame_TWO_entry = Entry(parent)
 
-		self.initial_frame_ONE_entry.grid(row=5, column=1, sticky=W+E)
-		self.initial_frame_TWO_entry.grid(row=5, column=4, sticky=W+E)
+		self.initial_frame_ONE_entry.grid(row=5, column=0, sticky=E)
+		self.initial_frame_TWO_entry.grid(row=5, column=2, sticky=E)
 
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("forward_facing",ONE, TWO)).grid(row=5, column=2, sticky=W+E)
-		Button(parent, text='   SET   ', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=5, column=5, sticky=W+E)
+		Button(parent, text='SET', command=lambda: self.set_initial_frame("forward_facing",ONE, TWO)).grid(row=5, column=1, sticky=W+E)
+		Button(parent, text='SET', command=lambda: self.set_initial_frame("surface_facing",ONE, TWO)).grid(row=5, column=3, sticky=W+E)
 
 		#plotting REF & QRY signal 
 		ONE.a.plot(ONE.t, ONE.new_signal)
@@ -528,12 +524,12 @@ class CameraLocGUI:
 		# a tk.DrawingArea
 		ONE_canvas = FigureCanvasTkAgg(ONE.f, master=parent)
 		ONE_canvas.show()
-		ONE_canvas.get_tk_widget().grid(row=6, column=0,columnspan=3)#,sticky=W+E)
+		ONE_canvas.get_tk_widget().grid(row=6, column=0,columnspan=2)#,sticky=W+E)
 
 
 		TWO_canvas = FigureCanvasTkAgg(TWO.f, master=parent)
 		TWO_canvas.show()
-		TWO_canvas.get_tk_widget().grid(row=6, column=3, columnspan=3)#,sticky=W+E)
+		TWO_canvas.get_tk_widget().grid(row=6, column=2, columnspan=2)#,sticky=W+E)
 
 		#start mainloop
 		self.parent.mainloop()
@@ -624,16 +620,16 @@ class CameraLocGUI:
 	def set_and_download(self, ONE, TWO):
 
 		self.pose = self.pose_est.get()
-		# name_1 = "REF_forward_facing_images"
-		# name_2 = "REF_surface_facing_images"
+		name_1 = self.dataset_name +"_forward_facing_images"
+		name_2 = self.dataset_name +"_surface_facing_images"
 
-		# path = "/home/kylesm/Desktop/VRES/VRES_GUI/REF/"
+		path = "/home/kyle/Desktop/VRES/" + self.dataset_name + "/"
 
-		# os.makedirs(path+name_1)
-		# os.makedirs(path+name_2)
+		os.makedirs(path+name_1)
+		os.makedirs(path+name_2)
 
-		# ONE.SaveFrames(name_1, path, ONE.url)
-		# TWO.SaveFrames(name_2, path, TWO.url)
+		ONE.SaveFrames(name_1, path, ONE.url)
+		TWO.SaveFrames(name_2, path, TWO.url)
 
 
 		self.parent.destroy()
@@ -692,10 +688,10 @@ def VisualOdometryVisualizations(current_image, previous_image, template_region,
 
 if __name__ == "__main__":
 
-	DATASET_PATH = '/home/kylesm/Desktop/VRES/VRES_GUI/REF'
+	DATASET_PATH = '/home/kyle/Desktop/VRES/REF'
 	DATASET_FILE_NAME = '/REF_dataset.yaml'
 	IMAGE_SET_TO_USE = "REF_surface_images"
-	PARAMETER_FILE = '/home/kylesm/Desktop/VRES/map_generation/ParameterFile.yaml'
+	PARAMETER_FILE = '/home/kyle/Desktop/VRES/map_generation/ParameterFile.yaml'
 
 	root = Tk()
 
