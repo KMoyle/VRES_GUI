@@ -458,7 +458,10 @@ if __name__ == "__main__":
 	  		confusion_matrix[QRY_array, REF_array] = int(difference_img.sum()/(100*60))
 
 	  		REF_image_index = REF_image_index+step
+	  		REF_array = REF_array + 1
 
+	  	REF_array = 0
+	  	QRY_array = QRY_array + 1
 	  	QRY_image_index = QRY_image_index+step
 
 	# WRITE CONFUSION MATRIX

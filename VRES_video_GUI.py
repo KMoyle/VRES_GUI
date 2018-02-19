@@ -83,7 +83,7 @@ class Dataset_Initialisation_GUI:
 		self.go_to_vis_gui_button = Button(self.master, text= "Go To Visualisation", state=DISABLED, command=self.GoToVisualisation)
 		self.go_to_vis_gui_button.grid(row=7, column=0, columnspan=2)
 
-		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata", command=self.SaveAndUpdate)
+		self.save_and_update_button = Button(self.master, text= "Save Dataset and Update Metadata",state=DISABLED, command=self.SaveAndUpdate)
 		self.save_and_update_button.grid(row=9, column=0, columnspan=2)
 
 		# VARIABLES
